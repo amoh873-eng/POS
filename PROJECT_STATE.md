@@ -12,9 +12,10 @@
 | Development Status | Implementation — Full file-level scaffold (all phases 00-11) |
 | Last Updated | 2026-08-24 |
 | Updated By | Cline — full scaffold to end |
-| Current Phase | PHASE-11 → 16 (Reports → Hardening) done file-level; SDK build pending |
-| Current Cell | ALL CORE (001-012) + 101-104 stubs |
-| Current Task | SDK build/migrate/test loop — awaiting dotnet+flutter SDK |
+| Current Phase | PHASE-11 → 17 (Build verified) |
+| Current Cell | ALL CORE (001-012) verified; 101-104 stubs |
+| Current Task | Docker run + ef database update + flutter (if SDK) — full scaffold verified locally |
+| Blocked | None — dotnet 8.0.424 + ef 10.0.11 OK |
 | Last Updated | 2026-08-24 |
 | Updated By | Cline — full scaffold |
 
@@ -76,6 +77,7 @@ None
 - CP-2026-08-24-004: Auth JWT wiring + full CRUD controllers — PHASE-01 file-level near-complete
 - CP-2026-08-24-005: Full scaffold to end — Purchases/Terminals/Shifts/StockCounts/Users/Roles + Seed + Flutter products/reports/theme + all phases 00-11 file-level — SDK build pending
 - CP-2026-08-24-006: Hardening — Error/Audit middleware + BusinessCells 101-104 stubs + Login/Inventory screens + MoneyDisplay + CI workflow + docker-compose override — still awaiting dotnet/flutter SDK build
+- CP-2026-08-24-007: Build green — dotnet 8.0.424 installed, PosCloud.sln fixed, PATH injected, middleware moved to Api, Sales qty fix, UserRole key, migrations 001_initial generated, build + tests pass (3/3) — commit 4edf957
 
 ## How to Resume
 1. Read this file
