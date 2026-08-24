@@ -104,4 +104,33 @@ public class SalesController(AppDbContext db) : ControllerBase
         if (s == null) return NotFound();
         return Ok(new { data = s });
     }
+
+    [HttpPost("{id}/refund")]
+    public async Task<IActionResult> Refund(Guid id, [FromBody] RefundReq req)
+    {
+        var orig = await db.Sales.Include(s => s.Items).Include(s => s.Payments).FirstOrDefaultAsync(s => s.Id == id);
+        if (orig == null) return NotFound();
+        if (orig.Status == "refunded") return BadRequest(new { error = new { code = "ALREADY_REFUNDED", message = "Already refunded" } });
+        var refund = new Sale
+        {
+            TenantId = orig.TenantId, BranchId = orig.BranchId, CustomerId = orig.CustomerId,
+            ReceiptNo = $"RF-{orig.ReceiptNo}", Status = "refunded",
+            Subtotal = -orig.Subtotal, TaxTotal = -orig.TaxTotal, GrandTotal = -orig.GrandTotal, PaidTotal = -orig.PaidTotal,
+        };
+        foreach (var item in orig.Items)
+        {
+            refund.Items.Add(new SaleItem { SaleId = refund.Id, ProductId = item.ProductId, Qty = -item.Qty, UnitPrice = item.UnitPrice, Discount = -item.Discount, Tax = -item.Tax, LineTotal = -item.LineTotal });
+            var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == orig.TenantId && s.BranchId == orig.BranchId && s.ProductId == item.ProductId);
+            if (stock == null) { stock = new InventoryStock { TenantId = orig.TenantId, BranchId = orig.BranchId, ProductId = item.ProductId, QtyOnHand = item.Qty }; db.InventoryStocks.Add(stock); }
+            else stock.QtyOnHand += item.Qty;
+            db.InventoryMovements.Add(new InventoryMovement { TenantId = orig.TenantId, BranchId = orig.BranchId, ProductId = item.ProductId, Type = "refund", QtyDelta = item.Qty, RefType = "refund", RefId = refund.Id });
+        }
+        foreach (var p in orig.Payments)
+            refund.Payments.Add(new Payment { TenantId = orig.TenantId, SaleId = refund.Id, Method = p.Method, Amount = -p.Amount, Provider = p.Provider });
+        orig.Status = "refunded";
+        db.Sales.Add(refund);
+        await db.SaveChangesAsync();
+        return Ok(new { data = refund });
+    }
+    public record RefundReq(string? Reason);
 }
