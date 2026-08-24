@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{E22F2248-0710-4803-AB10-D581A7721683}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BBFD24D8-6C68-4BFF-9841-4B53FF7C0A9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosCloud.Domain", "backend\src\PosCloud.Domain\PosCloud.Domain.csproj", "{48A20957-067B-4610-A42F-A075ED65FF8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosCloud.Application", "backend\src\PosCloud.Application\PosCloud.Application.csproj", "{37AFDEE4-E965-460A-AB6A-9734C566A6F9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosCloud.Infrastructure", "backend\src\PosCloud.Infrastructure\PosCloud.Infrastructure.csproj", "{5BBF3154-B0EF-4CB3-ABAD-6984A5528A18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosCloud.Api", "backend\src\PosCloud.Api\PosCloud.Api.csproj", "{37454436-4E8D-43E0-B790-92F1D394A7B5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{21E19AAA-3F35-4C03-B2B2-135B51C0BF7E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosCloud.Tests", "backend\tests\PosCloud.Tests\PosCloud.Tests.csproj", "{D9227C76-5E47-4BE7-8155-63932CE772A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48A20957-067B-4610-A42F-A075ED65FF8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48A20957-067B-4610-A42F-A075ED65FF8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48A20957-067B-4610-A42F-A075ED65FF8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48A20957-067B-4610-A42F-A075ED65FF8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37AFDEE4-E965-460A-AB6A-9734C566A6F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37AFDEE4-E965-460A-AB6A-9734C566A6F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37AFDEE4-E965-460A-AB6A-9734C566A6F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37AFDEE4-E965-460A-AB6A-9734C566A6F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BBF3154-B0EF-4CB3-ABAD-6984A5528A18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BBF3154-B0EF-4CB3-ABAD-6984A5528A18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BBF3154-B0EF-4CB3-ABAD-6984A5528A18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BBF3154-B0EF-4CB3-ABAD-6984A5528A18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37454436-4E8D-43E0-B790-92F1D394A7B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37454436-4E8D-43E0-B790-92F1D394A7B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37454436-4E8D-43E0-B790-92F1D394A7B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37454436-4E8D-43E0-B790-92F1D394A7B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9227C76-5E47-4BE7-8155-63932CE772A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9227C76-5E47-4BE7-8155-63932CE772A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9227C76-5E47-4BE7-8155-63932CE772A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9227C76-5E47-4BE7-8155-63932CE772A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BBFD24D8-6C68-4BFF-9841-4B53FF7C0A9C} = {E22F2248-0710-4803-AB10-D581A7721683}
+		{48A20957-067B-4610-A42F-A075ED65FF8D} = {BBFD24D8-6C68-4BFF-9841-4B53FF7C0A9C}
+		{37AFDEE4-E965-460A-AB6A-9734C566A6F9} = {BBFD24D8-6C68-4BFF-9841-4B53FF7C0A9C}
+		{5BBF3154-B0EF-4CB3-ABAD-6984A5528A18} = {BBFD24D8-6C68-4BFF-9841-4B53FF7C0A9C}
+		{37454436-4E8D-43E0-B790-92F1D394A7B5} = {BBFD24D8-6C68-4BFF-9841-4B53FF7C0A9C}
+		{21E19AAA-3F35-4C03-B2B2-135B51C0BF7E} = {E22F2248-0710-4803-AB10-D581A7721683}
+		{D9227C76-5E47-4BE7-8155-63932CE772A0} = {21E19AAA-3F35-4C03-B2B2-135B51C0BF7E}
+	EndGlobalSection
+EndGlobal

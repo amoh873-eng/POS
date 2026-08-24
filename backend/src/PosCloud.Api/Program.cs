@@ -38,8 +38,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors("all");
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<PosCloud.Infrastructure.Middleware.ErrorHandlingMiddleware>();
-app.UseMiddleware<PosCloud.Infrastructure.Middleware.AuditMiddleware>();
+app.UseMiddleware<PosCloud.Api.Middleware.ErrorHandlingMiddleware>();
+app.UseMiddleware<PosCloud.Api.Middleware.AuditMiddleware>();
 
 app.MapHealthChecks("/health");
 app.MapControllers();

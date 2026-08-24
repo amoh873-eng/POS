@@ -50,6 +50,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<TenantSettings>(e => { e.ToTable("tenant_settings"); e.HasKey(x => x.TenantId); });
         b.Entity<User>(e => { e.ToTable("users"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.Email }).IsUnique(); });
         b.Entity<Role>(e => { e.ToTable("roles"); e.HasKey(x => x.Id); });
+        b.Entity<UserRole>(e => { e.ToTable("user_roles"); e.HasKey(x => new { x.UserId, x.RoleId }); });
         b.Entity<RefreshToken>(e => { e.ToTable("refresh_tokens"); e.HasKey(x => x.Id); e.HasIndex(x => x.TokenHash).IsUnique(); });
         b.Entity<Category>(e => { e.ToTable("categories"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.BranchId }); });
         b.Entity<Product>(e => { e.ToTable("products"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.Sku }).IsUnique(); e.HasIndex(x => x.BarcodeMain); });

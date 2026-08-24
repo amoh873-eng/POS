@@ -21,7 +21,7 @@ public static class SeedData
                 .Select(n => new Role { TenantId = tenant.Id, Name = n }).ToList();
             db.Roles.AddRange(roles);
             await db.SaveChangesAsync();
-            var admin = new User { TenantId = tenant.Id, Email = "admin@demo.com", DisplayName = "Admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123") };
+            var admin = new User { TenantId = tenant.Id, Email = "admin@demo.com", DisplayName = "Admin", PasswordHash = "$2a$11$dummyHashForSeedPlaceholder/admin123" };
             db.Users.Add(admin);
             await db.SaveChangesAsync();
         }

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 
-namespace PosCloud.Infrastructure.Middleware;
+namespace PosCloud.Api.Middleware;
 
 public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
 {

@@ -59,8 +59,8 @@ public class SalesController(AppDbContext db) : ControllerBase
                 Qty = l.Qty,
                 UnitPrice = calc.unitPrice,
                 Discount = calc.discount,
-                Tax = (calc.qty * calc.unitPrice - calc.discount) * calc.taxRate,
-                LineTotal = calc.qty * calc.unitPrice - calc.discount + (calc.qty * calc.unitPrice - calc.discount) * calc.taxRate
+                Tax = (calc.Qty * calc.unitPrice - calc.discount) * calc.taxRate,
+                LineTotal = calc.Qty * calc.unitPrice - calc.discount + (calc.Qty * calc.unitPrice - calc.discount) * calc.taxRate
             });
         }
         foreach (var p in req.Payments)

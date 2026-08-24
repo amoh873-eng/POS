@@ -1,7 +1,7 @@
 using PosCloud.Domain.Entities;
 using PosCloud.Infrastructure.Data;
 
-namespace PosCloud.Infrastructure.Middleware;
+namespace PosCloud.Api.Middleware;
 
 public class AuditMiddleware(RequestDelegate next)
 {
