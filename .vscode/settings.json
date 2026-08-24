@@ -1,0 +1,15 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "search.exclude": {
+    "**/.git": true,
+    "**/bin": true,
+    "**/obj": true,
+    "**/node_modules": true
+  },
+  "cSpell.words": ["PosCloud", "EFCore", "SignalR"],
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
+}

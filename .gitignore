@@ -1,0 +1,32 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+build/
+*.g.dart
+*.freezed.dart
+# DB
+*.db
+*.sqlite
+*.sqlite3
+# Env
+.env
+appsettings.Development.json
+secrets.json
+# IDE
+.idea/
+*.code-workspace
+# OS
+Thumbs.db
+.DS_Store
+# Extracted temp
+_extracted.txt
+_doc_extracted.txt
