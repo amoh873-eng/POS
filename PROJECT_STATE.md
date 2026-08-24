@@ -43,9 +43,13 @@
 - [x] 07_BUSINESS_CELLS.md — Business-specific Cells
 - [x] 08_TESTING.md — Testing Strategy
 - [x] 09_IMPLEMENTATION_PLAN.md
-- [ ] Backend scaffold (ASP.NET Core Modular Monolith)
-- [ ] Frontend scaffold (Flutter)
-- [ ] Docker / docker-compose
+- [x] Backend scaffold (ASP.NET Core Modular Monolith) — Domain/Application/Infrastructure/Api + BaseEntity/Tenant/Branch/AuditLog + AppDbContext + Health + Swagger
+- [x] Frontend scaffold (Flutter) — pubspec + main.dart
+- [x] Docker / docker-compose — postgres + api
+
+## Next Phase
+- PHASE-01 Foundation — Tenants/Branches/Settings + migrations (requires `dotnet` SDK — manual `dotnet ef migrations add` when SDK available)
+- PHASE-02 Identity — JWT + Refresh + Roles
 
 ## Architectural Decisions (ADRs)
 - ADR-001: Lightweight Modular Monolith — no microservices in v1
