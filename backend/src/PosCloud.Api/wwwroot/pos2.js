@@ -1,27 +1,40 @@
 async function scanAdd(){
-  const v=document.getElementById('scanInput').value.trim(); if(!v) return;
-  let p=allProducts.find(x=> (x.barcodeMain||x.barcode_main)===v || (x.sku||'').toLowerCase()===v.toLowerCase() || (x.nameAr||'').includes(v));
+  const v=(document.getElementById('searchInput')?.value || document.getElementById('scanInput')?.value || '').trim(); if(!v) return;
+  let p=allProducts.find(x=> (x.barcodeMain||x.barcode_main)===v || (x.sku||'').toLowerCase()===v.toLowerCase() || (x.nameAr||'').includes(v) || (x.nameEn||'').toLowerCase().includes(v.toLowerCase()));
   if(!p){ try{ const r=await jget('/api/products/barcode/'+encodeURIComponent(v)+'?tenantId='+TENANT); if(r.data) p=r.data; }catch(e){} }
   if(p) addToCart(p); else alert('غير موجود: '+v);
-  document.getElementById('scanInput').value='';
+  const si=document.getElementById('searchInput'); if(si) si.value=''; const sc=document.getElementById('scanInput'); if(sc) sc.value='';
 }
+function chg(i,delta){ cart[i].qty=Math.max(1,cart[i].qty+delta); renderCart(); renderGrid(); }
 function renderCart(){
-  const tb=document.getElementById('cartBody'); tb.innerHTML='';
+  // new bill panel
+  const wrap=document.getElementById('billItems');
   let sub=0,tax=0;
-  cart.forEach((c,i)=>{
-    const line=c.price*c.qty; const t=line*c.tax; sub+=line; tax+=t;
-    const tr=document.createElement('tr');
-    tr.innerHTML='<td>'+c.name+'</td><td><input type=number value='+c.qty+' min=1 style=width:60px onchange="cart['+i+'].qty=Number(this.value);renderCart()"></td><td>'+c.price.toFixed(2)+'</td><td><button onclick="cart.splice('+i+',1);renderCart()">x</button></td>';
-    tb.appendChild(tr);
-  });
+  if(wrap){
+    wrap.innerHTML='';
+    cart.forEach((c,i)=>{
+      const line=c.price*c.qty; const t=line*c.tax; sub+=line; tax+=t;
+      const row=document.createElement('div'); row.className='bitem';
+      row.innerHTML='<img src="'+(c.img||'')+'"/><div style="flex:1"><div style="font-weight:700">'+c.name+'</div><div class="muted" style="font-size:.75rem">Rs.'+c.price.toFixed(2)+'</div></div><div class="qty"><button onclick="chg('+i+',-1)">−</button><span>'+c.qty+'</span><button onclick="chg('+i+',1)">+</button></div><a href="#" onclick="event.preventDefault();cart.splice('+i+',1);renderCart();renderGrid()" style="color:#DC2626;font-size:.75rem">Remove</a>';
+      wrap.appendChild(row);
+    });
+  } else {
+    cart.forEach(c=>{ const line=c.price*c.qty; const t=line*c.tax; sub+=line; tax+=t; });
+  }
+  // legacy hidden table for compat
+  const tb=document.getElementById('cartBody'); if(tb){ tb.innerHTML=''; cart.forEach((c,i)=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+c.name+'</td><td>'+c.qty+'</td><td>'+c.price.toFixed(2)+'</td>'; tb.appendChild(tr);});}
   const disc=Number(document.getElementById('discountTotal').value||0);
-  document.getElementById('cartSubtotal').textContent=sub.toFixed(2);
-  document.getElementById('cartTax').textContent=tax.toFixed(2);
+  const billSub=document.getElementById('billSub'); if(billSub) billSub.textContent='Rs.'+sub.toFixed(2);
+  const billTax=document.getElementById('billTax'); if(billTax) billTax.textContent='Rs.'+tax.toFixed(2);
   const grand=sub+tax-disc;
-  document.getElementById('cartTotal').textContent=grand.toFixed(2);
-  document.getElementById('payAmount').value=grand.toFixed(2);
+  const billTot=document.getElementById('billTotal'); if(billTot) billTot.textContent='Rs.'+grand.toFixed(2);
+  const cs=document.getElementById('cartSubtotal'); if(cs) cs.textContent=sub.toFixed(2);
+  const ct=document.getElementById('cartTax'); if(ct) ct.textContent=tax.toFixed(2);
+  const gt2=document.getElementById('cartTotal'); if(gt2) gt2.textContent=grand.toFixed(2);
+  const pay=document.getElementById('payAmount'); if(pay) pay.value=grand.toFixed(2);
+  const br=document.getElementById('posBranch')?.value||''; const bbr=document.getElementById('billBranch'); if(bbr) bbr.textContent=br?br.slice(0,8)+'…':'—';
 }
-function clearCart(){ cart=[]; renderCart(); document.getElementById('posOut').textContent=''; const r=document.getElementById('receipt'); if(r) r.style.display='none'; }
+function clearCart(){ cart=[]; renderCart(); renderGrid(); document.getElementById('posOut').textContent=''; const r=document.getElementById('receipt'); if(r) r.style.display='none'; }
 async function checkout(){
   if(!cart.length) return alert('السلة فارغة');
   const branchId=document.getElementById('posBranch').value.trim(); if(!branchId) return alert('أدخل BranchId');
@@ -37,7 +50,7 @@ async function checkout(){
     cart.forEach(c=> rec+=c.name+' x'+c.qty+' = '+(c.price*c.qty).toFixed(2)+' JOD\n');
     rec+='----------------\nالإجمالي: '+document.getElementById('cartTotal').textContent+' JOD\nشكرا';
     const el=document.getElementById('receipt'); el.textContent=rec; el.style.display='block'; window.print();
-    cart=[]; renderCart(); loadDash();
+    cart=[]; renderCart(); renderGrid(); loadDash();
   }
 }
 async function loadSales(){
