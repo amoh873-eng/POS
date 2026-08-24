@@ -22,30 +22,33 @@ a{color:var(--muted);text-decoration:none}
 .nav button.active{background:var(--green);color:#fff;border-color:var(--green)}
 </style></head><body>
 <div class="topbar">
-  <div class="brand"><span>Rest</span>aurant</div>
+  <div class="brand" id="brandTitle"><span>Rest</span>aurant</div>
   <div class="search"><input id="searchInput" placeholder="Search Categories or Menu..." onkeydown="if(event.key==='Enter') doSearch()"/><button class="sbtn" onclick="doSearch()">&#128269;</button></div>
   <button class="icon" title="QR">▦</button><button class="icon" title="Notify">🔔</button>
+  <select id="businessType" onchange="switchBusiness(this.value)" style="padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--card)"><option value="restaurant">🍽 Restaurant</option><option value="supermarket">🛒 Supermarket</option><option value="pharmacy">💊 Pharmacy</option><option value="bakery">🥖 Bakery</option><option value="retail">🏪 Retail</option></select>
   <button class="btn" onclick="seedDemo()">+ Add New Item</button>
-  <div style="margin-left:auto;text-align:right"><div style="font-weight:800">Order #123</div><div class="muted" style="font-size:.75rem">Opened 8:00am</div></div>
+  <div style="margin-left:auto;text-align:right"><div style="font-weight:800" id="orderTitle">Order #123</div><div class="muted" style="font-size:.75rem">Opened 8:00am</div></div>
 </div>
 <div class="layout">
   <aside class="sidebar">
     <div class="user"><div class="avatar">👨‍🍳</div><div style="font-weight:800">Krishna Shrestha</div><div class="muted" style="font-size:.8rem">I'm a Cashier 🍕</div></div>
-    <div class="nav">
+    <div class="nav" id="sideNav">
       <button class="side active" data-tab="pos">Home</button><button class="side" data-tab="pos">Order</button>
       <button class="side" data-tab="dash">Menu</button><button class="side" data-tab="inventory">Wallet</button>
       <button class="side" data-tab="reports">History</button><button class="side" data-tab="customers">Promos</button>
       <button class="side" data-tab="sales">Bills</button><button class="side" data-tab="branches">Setting</button>
     </div>
+    <div id="bizExtras" class="card" style="font-size:.85rem"></div>
     <div class="card" style="text-align:center"><div style="font-size:42px">👨‍🍳</div><div class="muted">POS Cloud</div><a href="/swagger" target="_blank">Swagger</a> · <a href="/health">Health</a></div>
     <div style="display:flex;gap:6px;background:var(--bg);border-radius:999px;padding:4px"><button id="btnDark" class="btn ghost" style="flex:1" onclick="setDark(true)">🌙 Dark</button><button id="btnLight" class="btn ghost active" style="flex:1" onclick="setDark(false)">☀️ Light</button></div>
     <input id="posBranch" placeholder="BranchId (auto)" style="font-size:.75rem"/>
   </aside>
 <main style="padding:14px;overflow:auto">
-  <div style="font-weight:800">Choose Category <span style="color:var(--green)">40+ category</span></div>
+  <div style="font-weight:800" id="catTitle">Choose Category <span style="color:var(--green)">40+ category</span></div>
   <div class="chips" id="catChips" style="display:flex;gap:8px;overflow:auto;padding:6px 0">
     <button class="chip active" data-cat="all">🍽 All Items</button><button class="chip" data-cat="pizza">🍕 Pizza</button><button class="chip" data-cat="burger">🍔 Burger</button><button class="chip" data-cat="coffee">☕ Coffee</button><button class="chip" data-cat="momo">🥟 MOMO</button>
   </div>
+  <div id="bizBanner" class="card" style="display:none"></div>
   <style>
     .chips .chip{white-space:nowrap;padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);cursor:pointer}
     .chips .chip.active{background:var(--green);color:#fff;border-color:var(--green)}
@@ -120,12 +123,27 @@ a{color:var(--muted);text-decoration:none}
 </aside>
 </div>
 <script>
+const BIZ={
+  restaurant:{brand:'<span>Rest</span>aurant',chips:'<button class="chip active">🍽 All Items</button><button class="chip">🍕 Pizza</button><button class="chip">🍔 Burger</button><button class="chip">☕ Coffee</button><button class="chip">🥟 MOMO</button>',extras:'🍽 Tables • Kitchen • Modifiers<br><small class=muted>Tables + KDS (coming)</small>',banner:''},
+  supermarket:{brand:'<span>Super</span>market',chips:'<button class="chip active">🛒 All</button><button class="chip">🥦 Produce</button><button class="chip">🥛 Dairy</button><button class="chip">📦 Grocery</button><button class="chip">🧴 Household</button>',extras:'🛒 Scale • Promotions<br><small class=muted>Barcode + fast checkout</small>',banner:'<b>Supermarket mode:</b> Scan scale barcode + promotions auto-applied'},
+  pharmacy:{brand:'<span>Phar</span>macy',chips:'<button class="chip active">💊 All</button><button class="chip">💊 Medicine</button><button class="chip">🧴 Care</button><button class="chip">🩹 First Aid</button>',extras:'💊 Batches • Expiry • Prescriptions<br><small class=muted>Expiry enforced on sale</small>',banner:'<b>Pharmacy:</b> Expiry check before sale — expired items blocked'},
+  bakery:{brand:'<span>Bak</span>ery',chips:'<button class="chip active">🥖 All</button><button class="chip">🍞 Bread</button><button class="chip">🥐 Pastry</button><button class="chip">🍰 Cake</button>',extras:'🥖 Recipes • Batches • Cost<br><small class=muted>Produce from ingredients</small>',banner:'<b>Bakery:</b> Bake batches from recipes — cost calculated'},
+  retail:{brand:'<span>Re</span>tail',chips:'<button class="chip active">🏪 All</button><button class="chip">👕 Apparel</button><button class="chip">📱 Electronics</button><button class="chip">🏠 Home</button>',extras:'🏪 General retail<br><small class=muted>Simple — no extra module</small>',banner:''}
+};
+function switchBusiness(v){
+  localStorage.setItem('biz',v); const b=BIZ[v]||BIZ.restaurant;
+  document.getElementById('brandTitle').innerHTML=b.brand;
+  document.getElementById('catChips').innerHTML=b.chips;
+  document.getElementById('bizExtras').innerHTML=b.extras;
+  const bn=document.getElementById('bizBanner'); bn.innerHTML=b.banner; bn.style.display=b.banner?'block':'none';
+  document.getElementById('orderTitle').textContent=v==='restaurant'?'Order #123': v==='pharmacy'?'Prescription #123':'Order #123';
+  document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}));
+}
 document.getElementById('billDate').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 function setDark(v){document.body.classList.toggle('dark',v);document.getElementById('btnDark').classList.toggle('active',v);document.getElementById('btnLight').classList.toggle('active',!v);localStorage.setItem('posDark',v?'1':'0')}
 setDark(localStorage.getItem('posDark')==='1');
-document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
-  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');
-}));
+switchBusiness(localStorage.getItem('biz')||'restaurant');
+document.getElementById('businessType').value=localStorage.getItem('biz')||'restaurant';
 document.querySelectorAll('.side').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.side').forEach(x=>x.classList.remove('active')); b.classList.add('active');
   const t=b.dataset.tab;
