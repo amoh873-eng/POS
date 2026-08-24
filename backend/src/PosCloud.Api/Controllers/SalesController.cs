@@ -33,7 +33,22 @@ public class SalesController(AppDbContext db) : ControllerBase
 
         var (subtotal, taxTotal, grandTotal) = SaleCalculator.Compute(lines, req.DiscountTotal ?? 0);
         var paid = req.Payments.Sum(p => p.Amount);
-        if (paid != grandTotal && req.CustomerId == null)
+        // credit sale: allow unpaid if customer exists and within limit
+        if (req.CustomerId != null)
+        {
+            var cust = await db.Customers.FindAsync(req.CustomerId.Value);
+            if (cust != null)
+            {
+                var owed = grandTotal - paid;
+                if (owed > 0)
+                {
+                    if (cust.Balance + owed > cust.CreditLimit && cust.CreditLimit > 0)
+                        return UnprocessableEntity(new { error = new { code = "CREDIT_LIMIT", message = $"Credit limit exceeded: {cust.Balance}+{owed} > {cust.CreditLimit}" } });
+                    cust.Balance += owed;
+                }
+            }
+        }
+        else if (paid != grandTotal)
             return UnprocessableEntity(new { error = new { code = "PAYMENT_MISMATCH", message = $"Paid {paid} != Grand {grandTotal}" } });
 
         var sale = new Sale

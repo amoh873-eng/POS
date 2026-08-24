@@ -33,4 +33,16 @@ public class CustomersController(AppDbContext db) : ControllerBase
         var c = await db.Customers.FindAsync(id);
         return c == null ? NotFound() : Ok(new { data = c });
     }
+
+    [HttpPost("{id}/pay")]
+    public async Task<IActionResult> Pay(Guid id, [FromBody] PayReq req)
+    {
+        var c = await db.Customers.FindAsync(id);
+        if (c == null) return NotFound();
+        c.Balance -= req.Amount;
+        db.Payments.Add(new Payment { TenantId = c.TenantId, Method = "credit_settle", Amount = req.Amount, ProviderRef = $"customer:{id}" });
+        await db.SaveChangesAsync();
+        return Ok(new { data = c });
+    }
+    public record PayReq(decimal Amount);
 }
