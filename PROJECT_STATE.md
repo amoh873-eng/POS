@@ -35,12 +35,14 @@
 
 ## Next (PHASE-00 remaining)
 - [x] 01_ARCHITECTURE.md — Architecture Diagrams
-- [ ] 03_DATABASE.md — ERD + Entities
-- [ ] 02_ENGINEERING_CELLS.md — Cell Specifications
-- [ ] 04_API_SPECIFICATION.md — REST API Spec
-- [ ] 05_ALGORITHMS.md
-- [ ] 06_UI_UX.md — UI/UX Specification
-- [ ] 09_IMPLEMENTATION_PLAN.md
+- [x] 03_DATABASE.md — ERD + Entities
+- [x] 02_ENGINEERING_CELLS.md — Cell Specifications
+- [x] 04_API_SPECIFICATION.md — REST API Spec
+- [x] 05_ALGORITHMS.md
+- [x] 06_UI_UX.md — UI/UX Specification
+- [x] 07_BUSINESS_CELLS.md — Business-specific Cells
+- [x] 08_TESTING.md — Testing Strategy
+- [x] 09_IMPLEMENTATION_PLAN.md
 - [ ] Backend scaffold (ASP.NET Core Modular Monolith)
 - [ ] Frontend scaffold (Flutter)
 - [ ] Docker / docker-compose
