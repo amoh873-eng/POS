@@ -34,7 +34,7 @@
 - [x] Project scaffold created in `D:\POS`
 
 ## Next (PHASE-00 remaining)
-- [ ] 01_ARCHITECTURE.md — Architecture Diagrams
+- [x] 01_ARCHITECTURE.md — Architecture Diagrams
 - [ ] 03_DATABASE.md — ERD + Entities
 - [ ] 02_ENGINEERING_CELLS.md — Cell Specifications
 - [ ] 04_API_SPECIFICATION.md — REST API Spec
