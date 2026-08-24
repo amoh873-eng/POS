@@ -75,6 +75,7 @@ None
 - CP-2026-08-24-003: Core domain expansion — awaiting dotnet SDK
 - CP-2026-08-24-004: Auth JWT wiring + full CRUD controllers — PHASE-01 file-level near-complete
 - CP-2026-08-24-005: Full scaffold to end — Purchases/Terminals/Shifts/StockCounts/Users/Roles + Seed + Flutter products/reports/theme + all phases 00-11 file-level — SDK build pending
+- CP-2026-08-24-006: Hardening — Error/Audit middleware + BusinessCells 101-104 stubs + Login/Inventory screens + MoneyDisplay + CI workflow + docker-compose override — still awaiting dotnet/flutter SDK build
 
 ## How to Resume
 1. Read this file
