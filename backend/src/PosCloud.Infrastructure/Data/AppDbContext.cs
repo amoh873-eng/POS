@@ -63,5 +63,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<Payment>(e => { e.ToTable("payments"); e.HasKey(x => x.Id); });
         b.Entity<Customer>(e => { e.ToTable("customers"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.Phone }); });
         b.Entity<Supplier>(e => { e.ToTable("suppliers"); e.HasKey(x => x.Id); });
+        b.Entity<Purchase>(e => { e.ToTable("purchases"); e.HasKey(x => x.Id); e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.PurchaseId); });
+        b.Entity<PurchaseItem>(e => { e.ToTable("purchase_items"); e.HasKey(x => x.Id); });
+        b.Entity<Terminal>(e => { e.ToTable("terminals"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.BranchId }); });
+        b.Entity<Shift>(e => { e.ToTable("shifts"); e.HasKey(x => x.Id); });
     }
 }

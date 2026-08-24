@@ -42,11 +42,20 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-// Auto-migrate on start (dev only — remove for prod)
+// Auto-migrate + seed on start (dev only — remove for prod)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // db.Database.Migrate(); // enable after first migration
+    try
+    {
+        // db.Database.Migrate(); // enable after first migration is created
+        await PosCloud.Infrastructure.Seed.SeedData.SeedAsync(db);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Seed/migrate skipped");
+    }
 }
 
 app.Run();

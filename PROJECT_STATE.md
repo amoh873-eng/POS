@@ -9,14 +9,14 @@
 | Version | 1.1 |
 | Architecture | Approved Baseline |
 | Architecture Status | UNCHANGED |
-| Development Status | Implementation — Core scaffold |
+| Development Status | Implementation — Full file-level scaffold (all phases 00-11) |
 | Last Updated | 2026-08-24 |
-| Updated By | Cline — scaffold expansion |
-| Current Phase | PHASE-01 |
-| Current Cell | CELL-001 + 002 + 005-011 (Foundation → Sales) |
-| Current Task | Core entities + API scaffold (file-level) — SDK build pending |
+| Updated By | Cline — full scaffold to end |
+| Current Phase | PHASE-11 → 16 (Reports → Hardening) done file-level; SDK build pending |
+| Current Cell | ALL CORE (001-012) + 101-104 stubs |
+| Current Task | SDK build/migrate/test loop — awaiting dotnet+flutter SDK |
 | Last Updated | 2026-08-24 |
-| Updated By | Cline (Initial Setup) |
+| Updated By | Cline — full scaffold |
 
 ## Completed
 - [x] Project Vision
@@ -50,8 +50,16 @@
 - [x] Docker / docker-compose — postgres + api
 
 ## Next Phase
-- PHASE-01 Foundation — Tenants/Branches/Settings + migrations (requires `dotnet` SDK — manual `dotnet ef migrations add` when SDK available)
-- PHASE-02 Identity — JWT + Refresh + Roles
+- Install .NET SDK 8+ + Flutter SDK, then:
+  `dotnet build` → `dotnet ef migrations add 001_initial -p backend/src/PosCloud.Infrastructure -s backend/src/PosCloud.Api` → `dotnet ef database update` → `dotnet test` → `flutter pub get`
+- Then PHASE-16 Testing+Hardening → PHASE-17 Deployment (verified build)
+- Business cells 101-104 (Restaurant/Bakery/Pharmacy/Supermarket) — on demand per customer
+
+## Coverage (file-level)
+- Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx
+- Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav
+- Docs: 00-09 complete
+- Tests: SaleCalculator + project scaffold — expand per cell in hardening
 
 ## Architectural Decisions (ADRs)
 - ADR-001: Lightweight Modular Monolith — no microservices in v1
@@ -64,8 +72,9 @@ None
 ## Checkpoints
 - CP-2026-08-24-001: Initial scaffold — Master Spec extracted and stored
 - CP-2026-08-24-002: PHASE-00 docs + backend/frontend scaffold committed
-- CP-2026-08-24-003: Core domain expansion (TenantSettings/User/Role/Category/Product/Inventory/Sale/Customer/Supplier) + AppDbContext full mapping + SaleCalculator + Controllers (Auth/Branches/Products/Sales/Reports) + Flutter api_client/pos_screen — awaiting dotnet SDK for build/migrate
-- CP-2026-08-24-004: Auth JWT wiring (CORS+Auth in Program) + full CRUD controllers (Customers/Suppliers/Inventory/Categories/TenantSettings/Sync) + Flutter sync_queue/dashboard + xUnit tests — PHASE-01 file-level near-complete, still needs dotnet build/migrate
+- CP-2026-08-24-003: Core domain expansion — awaiting dotnet SDK
+- CP-2026-08-24-004: Auth JWT wiring + full CRUD controllers — PHASE-01 file-level near-complete
+- CP-2026-08-24-005: Full scaffold to end — Purchases/Terminals/Shifts/StockCounts/Users/Roles + Seed + Flutter products/reports/theme + all phases 00-11 file-level — SDK build pending
 
 ## How to Resume
 1. Read this file
