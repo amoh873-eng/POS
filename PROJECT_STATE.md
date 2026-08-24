@@ -65,6 +65,7 @@ None
 - CP-2026-08-24-001: Initial scaffold — Master Spec extracted and stored
 - CP-2026-08-24-002: PHASE-00 docs + backend/frontend scaffold committed
 - CP-2026-08-24-003: Core domain expansion (TenantSettings/User/Role/Category/Product/Inventory/Sale/Customer/Supplier) + AppDbContext full mapping + SaleCalculator + Controllers (Auth/Branches/Products/Sales/Reports) + Flutter api_client/pos_screen — awaiting dotnet SDK for build/migrate
+- CP-2026-08-24-004: Auth JWT wiring (CORS+Auth in Program) + full CRUD controllers (Customers/Suppliers/Inventory/Categories/TenantSettings/Sync) + Flutter sync_queue/dashboard + xUnit tests — PHASE-01 file-level near-complete, still needs dotnet build/migrate
 
 ## How to Resume
 1. Read this file
