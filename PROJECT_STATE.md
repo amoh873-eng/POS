@@ -78,6 +78,7 @@ None
 - CP-2026-08-24-005: Full scaffold to end — Purchases/Terminals/Shifts/StockCounts/Users/Roles + Seed + Flutter products/reports/theme + all phases 00-11 file-level — SDK build pending
 - CP-2026-08-24-006: Hardening — Error/Audit middleware + BusinessCells 101-104 stubs + Login/Inventory screens + MoneyDisplay + CI workflow + docker-compose override — still awaiting dotnet/flutter SDK build
 - CP-2026-08-24-007: Build green — dotnet 8.0.424 installed, PosCloud.sln fixed, PATH injected, middleware moved to Api, Sales qty fix, UserRole key, migrations 001_initial generated, build + tests pass (3/3) — commit 4edf957
+- CP-2026-08-24-008: Extra screens (Settings/Customers) + widget_test + AuthTests (5 tests pass) — build+tests re-verified green
 
 ## How to Resume
 1. Read this file
