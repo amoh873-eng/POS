@@ -9,10 +9,12 @@
 | Version | 1.1 |
 | Architecture | Approved Baseline |
 | Architecture Status | UNCHANGED |
-| Development Status | Documentation / Architecture |
-| Current Phase | PHASE-00 |
-| Current Cell | None |
-| Current Task | Architecture Baseline |
+| Development Status | Implementation — Core scaffold |
+| Last Updated | 2026-08-24 |
+| Updated By | Cline — scaffold expansion |
+| Current Phase | PHASE-01 |
+| Current Cell | CELL-001 + 002 + 005-011 (Foundation → Sales) |
+| Current Task | Core entities + API scaffold (file-level) — SDK build pending |
 | Last Updated | 2026-08-24 |
 | Updated By | Cline (Initial Setup) |
 
@@ -61,6 +63,8 @@ None
 
 ## Checkpoints
 - CP-2026-08-24-001: Initial scaffold — Master Spec extracted and stored
+- CP-2026-08-24-002: PHASE-00 docs + backend/frontend scaffold committed
+- CP-2026-08-24-003: Core domain expansion (TenantSettings/User/Role/Category/Product/Inventory/Sale/Customer/Supplier) + AppDbContext full mapping + SaleCalculator + Controllers (Auth/Branches/Products/Sales/Reports) + Flutter api_client/pos_screen — awaiting dotnet SDK for build/migrate
 
 ## How to Resume
 1. Read this file
