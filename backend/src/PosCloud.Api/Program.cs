@@ -23,7 +23,12 @@ builder.Services.AddAuthorization();
 
 var cs = builder.Configuration.GetConnectionString("Default")
     ?? "Host=localhost;Database=poscloud;Username=postgres;Password=postgres";
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(cs));
+// Fallback to InMemory when Postgres is unavailable (demo/dev) — override with real CS or set UseInMemory=false
+var useInMemory = builder.Configuration.GetValue<bool?>("UseInMemory") ?? true;
+if (useInMemory)
+    builder.Services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("poscloud_demo"));
+else
+    builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(cs));
 
 builder.Services.AddHealthChecks();
 
