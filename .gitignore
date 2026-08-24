@@ -30,3 +30,5 @@ Thumbs.db
 # Extracted temp
 _extracted.txt
 _doc_extracted.txt
+# Flutter SDK clone (do not commit)
+flutter/
