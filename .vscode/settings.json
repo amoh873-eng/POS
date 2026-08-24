@@ -11,5 +11,6 @@
     "**/node_modules": true
   },
   "cSpell.words": ["PosCloud", "EFCore", "SignalR"],
-  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+  "pos.masterSpecAutoLoad": true
 }
