@@ -34,11 +34,10 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "POS Cloud API v1"));
+app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapGet("/api", () => new { name = "POS Cloud API", version = "1.1", docs = "/swagger", health = "/health" });
 
 app.UseCors("all");
 app.UseAuthentication();
