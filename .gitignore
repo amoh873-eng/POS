@@ -31,5 +31,8 @@ Thumbs.db
 # Extracted temp
 _extracted.txt
 _doc_extracted.txt
+# Local discovery dumps (never commit)
+pos.txt
+project-files.txt
 # Flutter SDK clone (do not commit)
 flutter/

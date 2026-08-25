@@ -54,7 +54,7 @@ public class Customer
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public decimal CreditLimit { get; set; }
-    public decimal Balance { get; set; } // + = customer owes, - = overpaid
+    public decimal Balance { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; }
 }

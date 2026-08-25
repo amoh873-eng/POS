@@ -9,10 +9,12 @@ public class Product : BaseEntity
     public string NameEn { get; set; } = null!;
     public string Sku { get; set; } = null!;
     public string? BarcodeMain { get; set; }
+    public string? Description { get; set; }
     public string Unit { get; set; } = "pcs";
     public decimal CostPrice { get; set; }
     public decimal SellPrice { get; set; }
     public decimal TaxRate { get; set; }
+    public decimal MinStockLevel { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
