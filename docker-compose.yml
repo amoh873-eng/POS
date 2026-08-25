@@ -13,7 +13,9 @@ services:
       retries: 10
 
   api:
-    build: ./backend/src/PosCloud.Api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports: ["5000:8080"]
     environment:
       ConnectionStrings__Default: "Host=postgres;Database=${POSTGRES_DB:-poscloud};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?required}"

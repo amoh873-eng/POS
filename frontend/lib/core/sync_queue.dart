@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 enum SyncState { pending, synced, failed }
 
 class SyncItem {

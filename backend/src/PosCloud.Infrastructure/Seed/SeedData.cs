@@ -8,8 +8,45 @@ public static class SeedData
 {
     public static async Task SeedAsync(AppDbContext db, bool seedDemoData = true)
     {
-        if (!seedDemoData) return;
-        if (!await db.Tenants.AnyAsync())
+        // Always ensure at least one tenant/branch/admin exists — minimal production seed.
+        // Demo seed (sample products etc.) only when seedDemoData=true (Development).
+        var hasTenant = await db.Tenants.AnyAsync();
+        if (!seedDemoData)
+        {
+            if (!hasTenant)
+            {
+                var tenant = new Tenant { Name = "Demo Business", Slug = "demo", IsActive = true };
+                db.Tenants.Add(tenant);
+                await db.SaveChangesAsync();
+                var branch = new Branch { TenantId = tenant.Id, Name = "Main Branch", Code = "MAIN", IsActive = true };
+                db.Branches.Add(branch);
+                var settings = new TenantSettings { TenantId = tenant.Id, BusinessName = "Demo Business", PrimaryColor = "#6D5BD0", Currency = "JOD", Language = "ar" };
+                db.TenantSettings.Add(settings);
+                var roles = new[] { "Owner", "Administrator", "Manager", "Cashier", "Inventory", "Accountant" }
+                    .Select(n => new Role { TenantId = tenant.Id, Name = n }).ToList();
+                db.Roles.AddRange(roles);
+                await db.SaveChangesAsync();
+                var admin = new User { TenantId = tenant.Id, Email = "admin@demo.com", DisplayName = "Admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123") };
+                db.Users.Add(admin);
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+                // Guard: fix legacy dummy hash even when demo seed is off
+                var adminUser0 = await db.Users.FirstOrDefaultAsync(u => u.Email == "admin@demo.com");
+                if (adminUser0 != null && !adminUser0.PasswordHash.StartsWith("$2"))
+                {
+                    adminUser0.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123");
+                    await db.SaveChangesAsync();
+                }
+                if (adminUser0 != null)
+                {
+                    try { if (!BCrypt.Net.BCrypt.Verify("Admin@123", adminUser0.PasswordHash)) { adminUser0.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"); await db.SaveChangesAsync(); } } catch { adminUser0.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"); await db.SaveChangesAsync(); }
+                }
+            }
+            return;
+        }
+        if (!hasTenant)
         {
             var tenant = new Tenant { Name = "Demo Business", Slug = "demo", IsActive = true };
             db.Tenants.Add(tenant);

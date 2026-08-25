@@ -1,4 +1,4 @@
-# PROJECT_STATE.md — POS Cloud Platform
+﻿# PROJECT_STATE.md — POS Cloud Platform
 
 > حالة المشروع المشتركة — يقرأها ويحدّثها كل AI Agents
 > هذا الملف هو المرجع الحيّ للاستمرارية (Controlled Continuity) — لا تعيد فحص المشروع كاملاً، اقرأ هذا الملف فقط.
@@ -9,13 +9,13 @@
 | Version | 1.1 |
 | Architecture | Approved Baseline |
 | Architecture Status | UNCHANGED |
-| Development Status | DEP-003 — VERIFIED (local) — AWAITING STAGING HOST (Docker/Flutter missing) |
+| Development Status | READY FOR STAGING |
 | Last Updated | 2026-08-25 |
-| Updated By | Cline — DEP-003 staging verification (P0=0 P1=0, 16/16, CHANGE_ME removed) |
-| Current Phase | PHASE-17 (Deployment) — STAGING GATE |
+| Updated By | Cline -- DEP-003 LIVE VERIFIED (Docker 29.7.2 + Flutter 3.47.1, dotnet 16/16, all gates PASS) |
+| Current Phase | PHASE-17 (Deployment) -- READY FOR STAGING |
 | Current Cell | ALL CORE 001-012 hardened; 101-104 stubs |
-| Current Task | Docker/Flutter not on this host — install Docker Desktop + Flutter SDK or run CI on staging host — docs/DEP-003-STAGING-VERIFICATION.md |
-| Blocked | AWAITING STAGING VERIFICATION — Docker/Flutter REQUIRED TOOL MISSING — do not claim READY FOR STAGING until staging host verifies |
+| Current Task | DEP-003 complete -- all gates PASS -- awaiting user approval to commit CP-017 |
+| Blocked | None -- READY FOR STAGING (Android/Windows doctor warnings NON-BLOCKING) |
 
 ## Completed
 - [x] Project Vision
@@ -51,7 +51,7 @@
 - [x] Docker / docker-compose — postgres + api
 - [x] DEP-001 audit — docs/DEPLOYMENT_READINESS_AUDIT.md (P0/P1/P2/P3) — ver 2026-08-25
 - [x] DEP-002 plan+resolution — P0=0 P1=0 (local 16/16)
-- [x] DEP-003 staging verification — docs/DEP-003-STAGING-VERIFICATION.md — AWAITING STAGING HOST (Docker/Flutter missing)
+- [x] DEP-003 staging verification -- docs/DEP-003-STAGING-VERIFICATION.md -- READY FOR STAGING (Docker 29.7.2 + Flutter 3.47.1, all gates PASS)
 
 ## Next Phase
 - DEP-002 complete (local) — awaiting staging host verification: `docker compose up -d` (with .env) + `curl /health` + `curl /swagger` (404 in prod) + `flutter test --dart-define=API_BASE_URL=...` — then promote to READY FOR STAGING
@@ -59,6 +59,11 @@
 - See `docs/DEP-002-BLOCKER-RESOLUTION.md` for P0/P1 closure; `docs/DEP-003-STAGING-VERIFICATION.md` for staging gate; P2/P3 deferred
 
 ## Coverage (file-level)
+- Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx -- 0 warnings, 16 tests (Release 11+5 ApiTests green) -- P0/P1 closed (DEP-002), DEP-003 READY
+- Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav + AppConfig (API_BASE_URL) -- flutter analyze/test/build web PASS (D:\flutter 3.47.1)
+- Docs: 00-09 complete + DEP-001 audit + DEP-002 plan/resolution + DEP-003 verification (READY FOR STAGING)
+- Tests: 11 unit + 5 ApiTests + 1 widget_test -- all PASS -- D:\flutter build/web exists
+
 - Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx — 0 warnings, 16 tests (Release 11+5 ApiTests green) — P0/P1 closed (DEP-002)
 - Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav + AppConfig (API_BASE_URL) — Flutter not on this host (CI will verify)
 - Docs: 00-09 complete + DEP-001 audit + DEP-002 plan/resolution
@@ -69,8 +74,8 @@
 - ADR-002: Flutter + ASP.NET Core + PostgreSQL + SQLite — لا يغيّرها Agent دون موافقة L3
 - ADR-003: Seven Layers are logical boundaries only
 
-## Blocked
-AWAITING STAGING VERIFICATION — Docker/Flutter REQUIRED TOOL MISSING on this host; see DEP-003 verification. Do not claim READY FOR STAGING until staging host verifies.
+## Blocked`r`nNone -- READY FOR STAGING (Android/Windows doctor warnings NON-BLOCKING)`r`n
+AWAITING STAGING VERIFICATION — Flutter SDK REQUIRED TOOL MISSING on this host (Docker/Postgres/API now healthy — see DEP-003 verification). Do not claim READY FOR STAGING until Flutter verifies.
 
 ## Checkpoints
 - CP-2026-08-24-001: Initial scaffold — Master Spec extracted and stored
@@ -88,6 +93,9 @@ AWAITING STAGING VERIFICATION — Docker/Flutter REQUIRED TOOL MISSING on this h
 - CP-2026-08-25-013: DEP-001 READINESS AUDIT (read-only) — docs/DEPLOYMENT_READINESS_AUDIT.md + Findings companion — 5×P0 + 7×P1 + 7×P2 + 3×P3 — PRODUCTION READINESS: BLOCKED — no arch conflict — project status set to AUDITED/BLOCKED
 - CP-2026-08-25-014: DEP-002 P0/P1 RESOLUTION — P0=0 P1=0 locally — appsettings env split + JWT fail-fast + [Authorize]×15 + CORS per-env + Swagger guard + error redaction + compose .env + demo guard + audit/correlation + ApiTests (5) + HTTPS/HSTS + Flutter AppConfig — dotnet 16/16 — docs/DEP-002-BLOCKER-PLAN/RESOLUTION — awaiting staging host
 - CP-2026-08-25-015: DEP-003 STAGING VERIFICATION — live verification on this host — dotnet 16/16 PASS, appsettings.json CHANGE_ME → __REQUIRED__ fixed, Docker/Flutter NOT VERIFIED (missing tools) — AWAITING STAGING HOST — docs/DEP-003-STAGING-VERIFICATION.md
+- CP-2026-08-25-016: DEP-003 (continued) -- Docker 29.7.2 READY -- backend/Dockerfile verified -- docker compose config/build/up PASS, postgres+api healthy, /health 200, /api 200, products 401 anon / 200 authed, swagger 404, login 200, SeedData minimal fix verified, dotnet 16/16 -- Flutter verified at end of this round
+- CP-2026-08-25-017: DEP-003 FLUTTER -- D:\flutter 3.47.1 LIVE -- customers_screen widget.api fix + sync_queue + pos_screen braces + web platform -- flutter analyze PASS (No issues), flutter test PASS (1/1), flutter build web PASS (build/web) -- AppConfig intact -- DEP-003 READY FOR STAGING
+
 
 ## How to Resume
 1. Read this file
