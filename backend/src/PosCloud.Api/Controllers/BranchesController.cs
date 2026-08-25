@@ -10,10 +10,17 @@ namespace PosCloud.Api.Controllers;
 public class BranchesController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] Guid tenantId)
+    public async Task<IActionResult> List([FromQuery] Guid? tenantId)
     {
-        var list = await db.Branches.Where(b => b.TenantId == tenantId).ToListAsync();
+        var tid = tenantId ?? GetTenantId();
+        var list = await db.Branches.Where(b => b.TenantId == tid).ToListAsync();
         return Ok(new { data = list });
+    }
+    private Guid GetTenantId()
+    {
+        var tidClaim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(tidClaim, out var tid)) return tid;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
     }
 
     [HttpPost]

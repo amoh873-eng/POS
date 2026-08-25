@@ -10,8 +10,10 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   List _items = [];
+  String? _tid;
   Future<void> _load() async {
-    final r = await api.get('/api/customers?tenantId=00000000-0000-0000-0000-000000000000');
+    try { final t = await api.get('/api/tenants'); if (t['data'] is List && (t['data'] as List).isNotEmpty) _tid = t['data'][0]['id']; } catch (_) {}
+    final r = await api.get(_tid != null ? '/api/customers?tenantId=$_tid' : '/api/customers');
     setState(() => _items = r['data'] ?? []);
   }
   @override

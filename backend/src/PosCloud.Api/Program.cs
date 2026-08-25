@@ -23,12 +23,14 @@ builder.Services.AddAuthorization();
 
 var cs = builder.Configuration.GetConnectionString("Default")
     ?? "Host=localhost;Database=poscloud;Username=postgres;Password=postgres";
-// Fallback to InMemory when Postgres is unavailable (demo/dev) — override with real CS or set UseInMemory=false
 var useInMemory = builder.Configuration.GetValue<bool?>("UseInMemory") ?? true;
 if (useInMemory)
     builder.Services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("poscloud_demo"));
 else
-    builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(cs));
+{
+    builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(cs, n => n.EnableRetryOnFailure()));
+    // when Postgres unavailable, fallback gracefully at runtime (Program.cs handles Migrate try/catch)
+}
 
 builder.Services.AddHealthChecks();
 
@@ -55,7 +57,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
-        // db.Database.Migrate(); // enable after first migration is created
+        if (!useInMemory) db.Database.Migrate();
         await PosCloud.Infrastructure.Seed.SeedData.SeedAsync(db);
     }
     catch (Exception ex)

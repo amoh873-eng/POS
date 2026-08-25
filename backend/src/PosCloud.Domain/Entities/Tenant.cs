@@ -1,5 +1,3 @@
-using PosCloud.Domain.Common;
-
 namespace PosCloud.Domain.Entities;
 
 public class Tenant
