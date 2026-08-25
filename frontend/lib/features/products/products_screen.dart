@@ -11,8 +11,11 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   List _items = [];
   final _q = TextEditingController();
+  String? _tid;
   Future<void> _load() async {
-    final res = await widget.api.get('/api/products?tenantId=00000000-0000-0000-0000-000000000000&q=${_q.text}');
+    try { final t = await widget.api.get('/api/tenants'); if (t['data'] is List && (t['data'] as List).isNotEmpty) _tid = t['data'][0]['id']; } catch (_) {}
+    final qp = _tid != null ? 'tenantId=$_tid' : 'tenantId=00000000-0000-0000-0000-000000000000';
+    final res = await widget.api.get('/api/products?$qp&q=${_q.text}');
     setState(() => _items = res['data'] ?? []);
   }
   @override

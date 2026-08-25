@@ -10,8 +10,11 @@ class InventoryScreen extends StatefulWidget {
 
 class _InventoryScreenState extends State<InventoryScreen> {
   List _items = [];
+  String? _tid;
   Future<void> _load() async {
-    final r = await widget.api.get('/api/inventory/stock?tenantId=00000000-0000-0000-0000-000000000000');
+    try { final t = await widget.api.get('/api/tenants'); if (t['data'] is List && (t['data'] as List).isNotEmpty) _tid = t['data'][0]['id']; } catch (_) {}
+    final qp = _tid != null ? 'tenantId=$_tid' : 'tenantId=00000000-0000-0000-0000-000000000000';
+    final r = await widget.api.get('/api/inventory/stock?$qp');
     setState(() => _items = r['data'] ?? []);
   }
   @override

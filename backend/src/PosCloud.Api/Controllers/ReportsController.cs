@@ -8,9 +8,17 @@ namespace PosCloud.Api.Controllers;
 [Route("api/reports")]
 public class ReportsController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     [HttpGet("daily-sales")]
     public async Task<IActionResult> DailySales([FromQuery] Guid tenantId, [FromQuery] DateTime? date, [FromQuery] Guid? branchId)
     {
+        tenantId = ResolveTid(tenantId);
         var d = (date ?? DateTime.UtcNow).Date;
         var q = db.Sales.Where(s => s.TenantId == tenantId && s.CreatedAt.Date == d && s.Status == "completed");
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
@@ -22,6 +30,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
     [HttpGet("sales")]
     public async Task<IActionResult> Sales([FromQuery] Guid tenantId, [FromQuery] DateTime from, [FromQuery] DateTime to)
     {
+        tenantId = ResolveTid(tenantId);
         var q = db.Sales.Where(s => s.TenantId == tenantId && s.CreatedAt >= from && s.CreatedAt <= to);
         var total = await q.SumAsync(s => s.GrandTotal);
         return Ok(new { data = new { from, to, total, count = await q.CountAsync() } });
@@ -30,6 +39,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
     [HttpGet("profit")]
     public async Task<IActionResult> Profit([FromQuery] Guid tenantId, [FromQuery] DateTime from, [FromQuery] DateTime to)
     {
+        tenantId = ResolveTid(tenantId);
         var sales = await db.Sales.Where(s => s.TenantId == tenantId && s.CreatedAt >= from && s.CreatedAt <= to && s.Status == "completed").Include(s=>s.Items).ToListAsync();
         decimal revenue = sales.Sum(s=>s.GrandTotal);
         decimal cost = 0;
@@ -43,6 +53,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
     [HttpGet("inventory")]
     public async Task<IActionResult> Inventory([FromQuery] Guid tenantId, [FromQuery] Guid? branchId)
     {
+        tenantId = ResolveTid(tenantId);
         var q = db.InventoryStocks.Where(s=>s.TenantId==tenantId);
         if(branchId!=null) q=q.Where(s=>s.BranchId==branchId);
         var items = await q.Include(s=>s.ProductId).ToListAsync();
@@ -58,6 +69,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
     [HttpGet("top-products")]
     public async Task<IActionResult> TopProducts([FromQuery] Guid tenantId, [FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] int take=5)
     {
+        tenantId = ResolveTid(tenantId);
         var sales = await db.Sales.Where(s=>s.TenantId==tenantId && s.CreatedAt>=from && s.CreatedAt<=to).Include(s=>s.Items).ToListAsync();
         var grouped = sales.SelectMany(s=>s.Items).GroupBy(i=>i.ProductId).Select(g=> new { productId=g.Key, qty=g.Sum(x=>x.Qty), total=g.Sum(x=>x.LineTotal) }).OrderByDescending(x=>x.qty).Take(take).ToList();
         return Ok(new { data = grouped });

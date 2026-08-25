@@ -8,10 +8,18 @@ namespace PosCloud.Api.Controllers;
 [Route("api/products")]
 public class ProductsController(AppDbContext db) : ControllerBase
 {
-    [HttpGet]
-    public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    private Guid ResolveTenant(Guid? qTid)
     {
-        var query = db.Products.Where(p => p.TenantId == tenantId && !p.IsDeleted);
+        if (qTid != null && qTid != Guid.Empty) return qTid.Value;
+        var tidClaim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(tidClaim, out var tid)) return tid;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
+    [HttpGet]
+    public async Task<IActionResult> List([FromQuery] Guid? tenantId, [FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var tid = ResolveTenant(tenantId);
+        var query = db.Products.Where(p => p.TenantId == tid && !p.IsDeleted);
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p => p.NameAr.Contains(q) || p.NameEn.Contains(q) || p.Sku.Contains(q));
         var total = await query.CountAsync();
@@ -20,9 +28,10 @@ public class ProductsController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("barcode/{code}")]
-    public async Task<IActionResult> ByBarcode(string code, [FromQuery] Guid tenantId)
+    public async Task<IActionResult> ByBarcode(string code, [FromQuery] Guid? tenantId)
     {
-        var p = await db.Products.FirstOrDefaultAsync(x => x.TenantId == tenantId && x.BarcodeMain == code && !x.IsDeleted);
+        var tid = ResolveTenant(tenantId);
+        var p = await db.Products.FirstOrDefaultAsync(x => x.TenantId == tid && x.BarcodeMain == code && !x.IsDeleted);
         if (p == null) return NotFound(new { error = new { code = "NOT_FOUND", message = "Product not found" } });
         return Ok(new { data = p });
     }

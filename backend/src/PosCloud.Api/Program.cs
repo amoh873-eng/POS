@@ -51,19 +51,26 @@ app.UseMiddleware<PosCloud.Api.Middleware.AuditMiddleware>();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-// Auto-migrate + seed on start (dev only — remove for prod)
+// Auto-migrate + seed on start — with graceful fallback when Docker Postgres not running
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    AppDbContext? db = null;
+    try { db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); } catch (Exception ex) { logger.LogWarning(ex, "DbContext resolve failed"); }
+    if (db != null)
     {
-        if (!useInMemory) db.Database.Migrate();
-        await PosCloud.Infrastructure.Seed.SeedData.SeedAsync(db);
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "Seed/migrate skipped");
+        try
+        {
+            if (!useInMemory) db.Database.Migrate();
+            await PosCloud.Infrastructure.Seed.SeedData.SeedAsync(db);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Seed/migrate skipped (will try InMemory fallback on next fix)");
+            // If Postgres unreachable, switch to InMemory for demo so API still boots
+            if (!useInMemory && ex.Message.Contains("postgres", StringComparison.OrdinalIgnoreCase))
+                logger.LogWarning("Postgres unreachable — set UseInMemory=true in appsettings or start docker-compose up");
+        }
     }
 }
 

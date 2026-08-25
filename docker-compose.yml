@@ -7,6 +7,10 @@ services:
       POSTGRES_PASSWORD: postgres
     ports: ["5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d poscloud"]
+      interval: 5s
+      retries: 10
 
   api:
     build: ./backend/src/PosCloud.Api
@@ -14,7 +18,15 @@ services:
     environment:
       ConnectionStrings__Default: "Host=postgres;Database=poscloud;Username=postgres;Password=postgres"
       ASPNETCORE_ENVIRONMENT: "Development"
-    depends_on: [postgres]
+      UseInMemory: "false"
+      Jwt__Key: "CHANGE_ME_min_32_chars_secret_key_for_jwt_CHANGE_ME"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      retries: 5
 
 volumes:
   pgdata:
