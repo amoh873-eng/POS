@@ -140,10 +140,11 @@ function switchBusiness(v){
   document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}));
 }
 document.getElementById('billDate').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-function setDark(v){document.body.classList.toggle('dark',v);document.getElementById('btnDark').classList.toggle('active',v);document.getElementById('btnLight').classList.toggle('active',!v);localStorage.setItem('posDark',v?'1':'0')}
+function setDark(v){document.body.classList.toggle('dark',v);const a=document.getElementById('btnDark'),b=document.getElementById('btnLight'); if(a) a.classList.toggle('active',v); if(b) b.classList.toggle('active',!v); localStorage.setItem('posDark',v?'1':'0')}
 setDark(localStorage.getItem('posDark')==='1');
-switchBusiness(localStorage.getItem('biz')||'restaurant');
-document.getElementById('businessType').value=localStorage.getItem('biz')||'restaurant';
+const _initialBiz=localStorage.getItem('biz')||'restaurant';
+switchBusiness(_initialBiz);
+const _bt=document.getElementById('businessType'); if(_bt) _bt.value=_initialBiz;
 document.querySelectorAll('.side').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.side').forEach(x=>x.classList.remove('active')); b.classList.add('active');
   const t=b.dataset.tab;
