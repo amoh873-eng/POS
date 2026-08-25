@@ -9,13 +9,13 @@
 | Version | 1.1 |
 | Architecture | Approved Baseline |
 | Architecture Status | UNCHANGED |
-| Development Status | Implementation — READY FOR DOCKER (Postgres+Seed+Frontend wired, 0 warnings) |
+| Development Status | AUDITED — BLOCKED (DEP-001: 5×P0 + 7×P1 open) |
 | Last Updated | 2026-08-25 |
-| Updated By | Cline — CP-012 |
-| Current Phase | PHASE-17 (Deployment) |
+| Updated By | Cline — DEP-001 audit (read-only) |
+| Current Phase | PHASE-17 (Deployment) — READINESS AUDIT |
 | Current Cell | ALL CORE 001-012 hardened; 101-104 stubs |
-| Current Task | Full tenant isolation + zero warnings — build 11 tests green — ready to push |
-| Blocked | None — dotnet 8.0.424 + ef 10.0.11 OK |
+| Current Task | Resolve DEP-001 P0/P1 before staging — see docs/DEPLOYMENT_READINESS_AUDIT.md |
+| Blocked | BLOCKED — 5 P0 + 7 P1 (JWT/CORS/Swagger/Auth/Secrets/Tenant tests/Flutter config — details in audit) |
 
 ## Completed
 - [x] Project Vision
@@ -34,7 +34,9 @@
 - [x] Master Specification stored in `docs/00_MASTER_SPECIFICATION.md`
 - [x] Project scaffold created in `D:\POS`
 
-## Next (PHASE-00 remaining)
+## Next (DEP-001 — PRODUCTION READINESS)
+- [ ] Resolve P0 (5): JWT secret hard-fail in Production + [Authorize] on all controllers + CORS per-env + Swagger env-guard + error message redaction
+- [ ] Resolve P1 (7): appsettings.Production.json + compose .env secrets + demo seed guard + tenant isolation ApiTests + Flutter AppConfig baseUrl + HTTPS/HSTS + logging scrubbing
 - [x] 01_ARCHITECTURE.md — Architecture Diagrams
 - [x] 03_DATABASE.md — ERD + Entities
 - [x] 02_ENGINEERING_CELLS.md — Cell Specifications
@@ -47,18 +49,18 @@
 - [x] Backend scaffold (ASP.NET Core Modular Monolith) — Domain/Application/Infrastructure/Api + BaseEntity/Tenant/Branch/AuditLog + AppDbContext + Health + Swagger
 - [x] Frontend scaffold (Flutter) — pubspec + main.dart
 - [x] Docker / docker-compose — postgres + api
+- [x] DEP-001 audit — docs/DEPLOYMENT_READINESS_AUDIT.md (P0/P1/P2/P3) — ver 2026-08-25
 
 ## Next Phase
-- Install .NET SDK 8+ + Flutter SDK, then:
-  `dotnet build` → `dotnet ef migrations add 001_initial -p backend/src/PosCloud.Infrastructure -s backend/src/PosCloud.Api` → `dotnet ef database update` → `dotnet test` → `flutter pub get`
-- Then PHASE-16 Testing+Hardening → PHASE-17 Deployment (verified build)
-- Business cells 101-104 (Restaurant/Bakery/Pharmacy/Supermarket) — on demand per customer
+- DEP-001 remediation: fix 5×P0 first (single commit batch), then 7×P1 — re-verify `dotnet test` + new ApiTests + `docker compose config` + `curr /health` on Docker host — then promote to READY FOR STAGING
+- Then PHASE-17 Deployment (verified build) — business cells 101-104 on demand per customer
+- Stale boilerplate removed — see DEP-001 audit for current gate criteria
 
 ## Coverage (file-level)
-- Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx
-- Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav
-- Docs: 00-09 complete
-- Tests: SaleCalculator + project scaffold — expand per cell in hardening
+- Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx — 0 warnings, 11 tests (Release green) — P0/P1 blockers open per DEP-001
+- Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav — Flutter not verified on this host (CI required)
+- Docs: 00-09 complete + DEP-001 audit
+- Tests: 11 unit — ApiTests + tenant isolation regression still TODO (P1-011)
 
 ## Architectural Decisions (ADRs)
 - ADR-001: Lightweight Modular Monolith — no microservices in v1
@@ -66,7 +68,7 @@
 - ADR-003: Seven Layers are logical boundaries only
 
 ## Blocked
-None
+BLOCKED — DEP-001: 5×P0 + 7×P1 — do not claim READY FOR STAGING/PRODUCTION until P0/P1 resolved and re-verified (see docs/DEPLOYMENT_READINESS_AUDIT.md)
 
 ## Checkpoints
 - CP-2026-08-24-001: Initial scaffold — Master Spec extracted and stored
@@ -81,6 +83,7 @@ None
 - CP-2026-08-25-010: Hardening batch 1 — BCrypt seed fix + sample data + TenantsController + Program.cs Migrate on UseInMemory=false + BranchesController tid fallback + Flutter main/Dashboard/POS/Reports/Settings/Customers wired + ApiClient+SyncQueue+Theme — build green 11/11 tests — UseInMemory false ready for docker postgres
 - CP-2026-08-25-011: Hardening batch 2 — Products/Reports tid fallback + docker healthcheck (postgres+api) + Jwt 32+ + api_client empty-body guard + Inventory/Products tid dynamic — build green — 2 commits ahead of origin
 - CP-2026-08-25-012: Hardening batch 3 — Sales/Customers/Suppliers/Purchases/Sync full ResolveTid + AuthController zero-warnings + widget_test fixed — build 0 warnings 11 tests green — ready for PHASE-17
+- CP-2026-08-25-013: DEP-001 READINESS AUDIT (read-only) — docs/DEPLOYMENT_READINESS_AUDIT.md + Findings companion — 5×P0 + 7×P1 + 7×P2 + 3×P3 — PRODUCTION READINESS: BLOCKED — no arch conflict — project status set to AUDITED/BLOCKED
 
 ## How to Resume
 1. Read this file
