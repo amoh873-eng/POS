@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Restaurant POS</title><style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Restaurant POS</title><link rel="manifest" href="/manifest.json"/><meta name="theme-color" content="#22C55E"/><style>
 :root{--bg:#F4F5F9;--card:#fff;--border:#E5E7EB;--text:#0F172A;--muted:#6B7280;--green:#22C55E;--green-dark:#16A34A;--yellow:#FACC15;--red:#DC2626}
 *{box-sizing:border-box;font-family:Inter,Segoe UI,Tahoma,sans-serif}body{margin:0;background:var(--bg);color:var(--text)}
 body.dark{--bg:#0B0F12;--card:#11181D;--border:#1F2A32;--text:#E5E7EB;--muted:#94A3B8}
@@ -158,4 +158,4 @@ document.querySelectorAll('.side').forEach(b=>b.addEventListener('click',()=>{
 function selectPay(m){document.querySelectorAll('.pay').forEach(p=>p.classList.toggle('active',p.dataset.pay===m));let h=document.getElementById('payMethod');if(!h){h=document.createElement('select');h.id='payMethod';h.style.display='none';h.innerHTML='<option value=cash>cash</option><option value=card>card</option><option value=ewallet>ewallet</option>';document.body.appendChild(h);}h.value=m;}
 function doSearch(){const v=document.getElementById('searchInput').value;document.getElementById('scanInput').value=v;scanAdd();}
 </script>
-<script src="/pos.js"></script><script src="/pos2.js"></script></body></html>
+<script src="/pos.js"></script><script src="/pos2.js"></script><script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script></body></html>
