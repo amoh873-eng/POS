@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/api_client.dart';
+import 'core/app_config.dart';
 import 'core/theme.dart';
 import 'core/sync_queue.dart';
 import 'features/auth/login_screen.dart';
@@ -20,7 +21,7 @@ class PosApp extends StatefulWidget {
 }
 
 class _PosAppState extends State<PosApp> {
-  final api = ApiClient('http://localhost:5000');
+  final api = ApiClient(AppConfig.baseUrl);
   final syncQueue = SyncQueue();
   bool _authed = false;
   int _idx = 0;

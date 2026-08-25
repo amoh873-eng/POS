@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PosCloud.Application.Sales;
@@ -7,6 +8,7 @@ using PosCloud.Infrastructure.Data;
 namespace PosCloud.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/sales")]
 public class SalesController(AppDbContext db) : ControllerBase
 {

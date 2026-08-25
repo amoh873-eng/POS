@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PosCloud.Domain.Entities;
@@ -6,6 +7,7 @@ using PosCloud.Infrastructure.Data;
 namespace PosCloud.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/terminals")]
 public class TerminalsController(AppDbContext db) : ControllerBase
 {
@@ -27,6 +29,7 @@ public class TerminalsController(AppDbContext db) : ControllerBase
 }
 
 [ApiController]
+[Authorize]
 [Route("api/shifts")]
 public class ShiftsController(AppDbContext db) : ControllerBase
 {

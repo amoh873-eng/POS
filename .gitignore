@@ -19,8 +19,9 @@ build/
 *.sqlite3
 # Env
 .env
-appsettings.Development.json
 secrets.json
+# Note: appsettings.Development.json IS committed (safe dev defaults); only .env holds secrets
+# appsettings.Development.json — keep committed for local DX (contains DEV_ONLY keys)
 # IDE
 .idea/
 *.code-workspace

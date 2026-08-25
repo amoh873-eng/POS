@@ -6,8 +6,9 @@ namespace PosCloud.Infrastructure.Seed;
 
 public static class SeedData
 {
-    public static async Task SeedAsync(AppDbContext db)
+    public static async Task SeedAsync(AppDbContext db, bool seedDemoData = true)
     {
+        if (!seedDemoData) return;
         if (!await db.Tenants.AnyAsync())
         {
             var tenant = new Tenant { Name = "Demo Business", Slug = "demo", IsActive = true };

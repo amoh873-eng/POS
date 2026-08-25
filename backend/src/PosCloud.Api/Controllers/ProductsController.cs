@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PosCloud.Infrastructure.Data;
@@ -6,6 +7,7 @@ namespace PosCloud.Api.Controllers;
 
 [ApiController]
 [Route("api/products")]
+[Authorize]
 public class ProductsController(AppDbContext db) : ControllerBase
 {
     private Guid ResolveTenant(Guid? qTid)

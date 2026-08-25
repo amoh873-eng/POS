@@ -9,13 +9,13 @@
 | Version | 1.1 |
 | Architecture | Approved Baseline |
 | Architecture Status | UNCHANGED |
-| Development Status | AUDITED — BLOCKED (DEP-001: 5×P0 + 7×P1 open) |
+| Development Status | DEP-002 — P0=0 P1=0 (local) — AWAITING STAGING VERIFICATION |
 | Last Updated | 2026-08-25 |
-| Updated By | Cline — DEP-001 audit (read-only) |
-| Current Phase | PHASE-17 (Deployment) — READINESS AUDIT |
+| Updated By | Cline — DEP-002 (P0/P1 resolved, 16/16 tests, awaiting Docker/Flutter host) |
+| Current Phase | PHASE-17 (Deployment) — DEP-002 COMPLETE (local) |
 | Current Cell | ALL CORE 001-012 hardened; 101-104 stubs |
-| Current Task | Resolve DEP-001 P0/P1 before staging — see docs/DEPLOYMENT_READINESS_AUDIT.md |
-| Blocked | BLOCKED — 5 P0 + 7 P1 (JWT/CORS/Swagger/Auth/Secrets/Tenant tests/Flutter config — details in audit) |
+| Current Task | Verify on Docker+Postgres+Flutter host: docker compose up + /health + /swagger + flutter test — then READY FOR STAGING |
+| Blocked | AWAITING STAGING — Docker/Flutter not on this host; P0/P1 closed locally — do not claim READY FOR PRODUCTION until staging host verifies |
 
 ## Completed
 - [x] Project Vision
@@ -35,8 +35,8 @@
 - [x] Project scaffold created in `D:\POS`
 
 ## Next (DEP-001 — PRODUCTION READINESS)
-- [ ] Resolve P0 (5): JWT secret hard-fail in Production + [Authorize] on all controllers + CORS per-env + Swagger env-guard + error message redaction
-- [ ] Resolve P1 (7): appsettings.Production.json + compose .env secrets + demo seed guard + tenant isolation ApiTests + Flutter AppConfig baseUrl + HTTPS/HSTS + logging scrubbing
+- [x] Resolve P0 (5): JWT secret hard-fail in Production + [Authorize] on all controllers + CORS per-env + Swagger env-guard + error message redaction — CLOSED (DEP-002)
+- [x] Resolve P1 (7): appsettings.Production.json + compose .env secrets + demo seed guard + tenant isolation ApiTests + Flutter AppConfig baseUrl + HTTPS/HSTS + logging scrubbing — CLOSED (DEP-002, 16/16 tests)
 - [x] 01_ARCHITECTURE.md — Architecture Diagrams
 - [x] 03_DATABASE.md — ERD + Entities
 - [x] 02_ENGINEERING_CELLS.md — Cell Specifications
@@ -52,15 +52,15 @@
 - [x] DEP-001 audit — docs/DEPLOYMENT_READINESS_AUDIT.md (P0/P1/P2/P3) — ver 2026-08-25
 
 ## Next Phase
-- DEP-001 remediation: fix 5×P0 first (single commit batch), then 7×P1 — re-verify `dotnet test` + new ApiTests + `docker compose config` + `curr /health` on Docker host — then promote to READY FOR STAGING
+- DEP-002 complete (local) — awaiting staging host verification: `docker compose up -d` (with .env) + `curl /health` + `curl /swagger` (404 in prod) + `flutter test --dart-define=API_BASE_URL=...` — then promote to READY FOR STAGING
 - Then PHASE-17 Deployment (verified build) — business cells 101-104 on demand per customer
-- Stale boilerplate removed — see DEP-001 audit for current gate criteria
+- See `docs/DEP-002-BLOCKER-RESOLUTION.md` for P0/P1 closure; P2/P3 deferred per audit
 
 ## Coverage (file-level)
-- Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx — 0 warnings, 11 tests (Release green) — P0/P1 blockers open per DEP-001
-- Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav — Flutter not verified on this host (CI required)
-- Docs: 00-09 complete + DEP-001 audit
-- Tests: 11 unit — ApiTests + tenant isolation regression still TODO (P1-011)
+- Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx — 0 warnings, 16 tests (Release 11+5 ApiTests green) — P0/P1 closed (DEP-002)
+- Frontend: Dashboard/POS/Products/Reports + ApiClient + SyncQueue + Theme + Nav + AppConfig (API_BASE_URL) — Flutter not on this host (CI will verify)
+- Docs: 00-09 complete + DEP-001 audit + DEP-002 plan/resolution
+- Tests: 11 unit + 5 ApiTests (tenant isolation + auth + fail-fast) — P2/P3 deferred
 
 ## Architectural Decisions (ADRs)
 - ADR-001: Lightweight Modular Monolith — no microservices in v1
@@ -68,7 +68,7 @@
 - ADR-003: Seven Layers are logical boundaries only
 
 ## Blocked
-BLOCKED — DEP-001: 5×P0 + 7×P1 — do not claim READY FOR STAGING/PRODUCTION until P0/P1 resolved and re-verified (see docs/DEPLOYMENT_READINESS_AUDIT.md)
+AWAITING STAGING — P0/P1 closed locally (DEP-002); staging host must verify Docker+Flutter. Do not claim READY FOR PRODUCTION until staging verification succeeds.
 
 ## Checkpoints
 - CP-2026-08-24-001: Initial scaffold — Master Spec extracted and stored
@@ -84,6 +84,7 @@ BLOCKED — DEP-001: 5×P0 + 7×P1 — do not claim READY FOR STAGING/PRODUCTION
 - CP-2026-08-25-011: Hardening batch 2 — Products/Reports tid fallback + docker healthcheck (postgres+api) + Jwt 32+ + api_client empty-body guard + Inventory/Products tid dynamic — build green — 2 commits ahead of origin
 - CP-2026-08-25-012: Hardening batch 3 — Sales/Customers/Suppliers/Purchases/Sync full ResolveTid + AuthController zero-warnings + widget_test fixed — build 0 warnings 11 tests green — ready for PHASE-17
 - CP-2026-08-25-013: DEP-001 READINESS AUDIT (read-only) — docs/DEPLOYMENT_READINESS_AUDIT.md + Findings companion — 5×P0 + 7×P1 + 7×P2 + 3×P3 — PRODUCTION READINESS: BLOCKED — no arch conflict — project status set to AUDITED/BLOCKED
+- CP-2026-08-25-014: DEP-002 P0/P1 RESOLUTION — P0=0 P1=0 locally — appsettings env split + JWT fail-fast + [Authorize]×15 + CORS per-env + Swagger guard + error redaction + compose .env + demo guard + audit/correlation + ApiTests (5) + HTTPS/HSTS + Flutter AppConfig — dotnet 16/16 — docs/DEP-002-BLOCKER-PLAN/RESOLUTION — awaiting staging host
 
 ## How to Resume
 1. Read this file

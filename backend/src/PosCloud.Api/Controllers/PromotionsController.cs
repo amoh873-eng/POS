@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PosCloud.Domain.Entities;
 
 namespace PosCloud.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/promotions")]
 public class PromotionsController : ControllerBase
 {

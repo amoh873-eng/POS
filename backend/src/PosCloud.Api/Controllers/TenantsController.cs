@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PosCloud.Infrastructure.Data;
@@ -5,6 +6,7 @@ using PosCloud.Infrastructure.Data;
 namespace PosCloud.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/tenants")]
 public class TenantsController(AppDbContext db) : ControllerBase
 {

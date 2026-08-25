@@ -18,6 +18,8 @@ public class AuthController(AppDbContext db, IConfiguration cfg) : ControllerBas
     public record RefreshReq(string RefreshToken);
 
     [HttpPost("login")]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth-ip")]
     public async Task<IActionResult> Login([FromBody] LoginReq req)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email && u.IsActive);
@@ -38,6 +40,8 @@ public class AuthController(AppDbContext db, IConfiguration cfg) : ControllerBas
     }
 
     [HttpPost("refresh")]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth-ip")]
     public async Task<IActionResult> Refresh([FromBody] RefreshReq req)
     {
         var hash = Hash(req.RefreshToken);
