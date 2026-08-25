@@ -79,6 +79,7 @@ None
 - CP-2026-08-24-006: Hardening — Error/Audit middleware + BusinessCells 101-104 stubs + Login/Inventory screens + MoneyDisplay + CI workflow + docker-compose override — still awaiting dotnet/flutter SDK build
 - CP-2026-08-24-007: Build green — dotnet 8.0.424 installed, PosCloud.sln fixed, PATH injected, middleware moved to Api, Sales qty fix, UserRole key, migrations 001_initial generated, build + tests pass (3/3) — commit 4edf957
 - CP-2026-08-24-008: Extra screens (Settings/Customers) + widget_test + AuthTests (5 tests pass) — build+tests re-verified green
+- CP-2026-08-24-009: POS full + 1+2+3+4+5 (inventory/credit/purchasing/reports) + refund + restaurant design 3-pane + business switcher 5 types + PWA installable — server on 0.0.0.0:5000 (192.168.100.15) — pushed to GitHub POS.git — 2026-08-24
 
 ## How to Resume
 1. Read this file
