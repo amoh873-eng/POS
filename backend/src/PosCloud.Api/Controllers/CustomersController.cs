@@ -9,9 +9,17 @@ namespace PosCloud.Api.Controllers;
 [Route("api/customers")]
 public class CustomersController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        tenantId = ResolveTid(tenantId);
         var query = db.Customers.Where(c => c.TenantId == tenantId && !c.IsDeleted);
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(c => c.Name.Contains(q) || (c.Phone != null && c.Phone.Contains(q)));
         var total = await query.CountAsync();

@@ -51,7 +51,7 @@ public class AuthController(AppDbContext db, IConfiguration cfg) : ControllerBas
         return Ok(new { data = new { access_token = access, refresh_token = refresh } });
     }
 
-    private async Task<(string access, string refresh)> IssueTokens(User user)
+    private Task<(string access, string refresh)> IssueTokens(User user)
     {
         var key = cfg["Jwt:Key"] ?? "CHANGE_ME_min_32_chars_secret_key_for_jwt";
         var creds = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)), SecurityAlgorithms.HmacSha256);
@@ -65,7 +65,7 @@ public class AuthController(AppDbContext db, IConfiguration cfg) : ControllerBas
         var refreshRaw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         var hash = Hash(refreshRaw);
         db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, TokenHash = hash, ExpiresAt = DateTime.UtcNow.AddDays(int.Parse(cfg["Jwt:RefreshTokenDays"] ?? "7")), CreatedByIp = HttpContext.Connection.RemoteIpAddress?.ToString() });
-        return (access, refreshRaw);
+        return Task.FromResult((access, refreshRaw));
     }
 
     private static string Hash(string s) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s)));

@@ -25,9 +25,17 @@ public class SyncController(AppDbContext db) : ControllerBase
         return Ok(new { data = results });
     }
 
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     [HttpGet("pull")]
     public async Task<IActionResult> Pull([FromQuery] Guid tenantId, [FromQuery] DateTime? since)
     {
+        tenantId = ResolveTid(tenantId);
         var s = since ?? DateTime.UtcNow.AddDays(-7);
         var products = await db.Products.Where(p => p.TenantId == tenantId && p.UpdatedAt >= s).ToListAsync();
         var customers = await db.Customers.Where(c => c.TenantId == tenantId).ToListAsync(); // add UpdatedAt to customer later

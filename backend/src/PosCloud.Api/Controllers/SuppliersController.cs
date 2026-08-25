@@ -9,9 +9,17 @@ namespace PosCloud.Api.Controllers;
 [Route("api/suppliers")]
 public class SuppliersController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        tenantId = ResolveTid(tenantId);
         var q = db.Suppliers.Where(s => s.TenantId == tenantId);
         var total = await q.CountAsync();
         var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();

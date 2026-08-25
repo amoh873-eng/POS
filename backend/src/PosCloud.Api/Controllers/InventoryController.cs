@@ -9,9 +9,17 @@ namespace PosCloud.Api.Controllers;
 [Route("api/inventory")]
 public class InventoryController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     [HttpGet("stock")]
     public async Task<IActionResult> Stock([FromQuery] Guid tenantId, [FromQuery] Guid? branchId, [FromQuery] string? q)
     {
+        tenantId = ResolveTid(tenantId);
         var query = db.InventoryStocks.Where(s => s.TenantId == tenantId);
         if (branchId != null) query = query.Where(s => s.BranchId == branchId);
         // q filter by product name handled via join in full impl — simple v1: filter by product_id

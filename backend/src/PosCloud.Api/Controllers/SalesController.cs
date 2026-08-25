@@ -10,6 +10,13 @@ namespace PosCloud.Api.Controllers;
 [Route("api/sales")]
 public class SalesController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     public record SaleLineReq(Guid ProductId, decimal Qty, decimal? UnitPrice, decimal? Discount);
     public record PaymentReq(string Method, decimal Amount, string? Provider, string? ProviderRef);
     public record CreateSaleReq(Guid BranchId, Guid TenantId, Guid? CustomerId, decimal? DiscountTotal, List<SaleLineReq> Lines, List<PaymentReq> Payments);
@@ -17,6 +24,7 @@ public class SalesController(AppDbContext db) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSaleReq req, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey)
     {
+        req = req with { TenantId = ResolveTid(req.TenantId) };
         if (!string.IsNullOrEmpty(idempotencyKey))
         {
             var existing = await db.Sales.Include(s => s.Items).Include(s => s.Payments)
@@ -106,6 +114,7 @@ public class SalesController(AppDbContext db) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        tenantId = ResolveTid(tenantId);
         var q = db.Sales.Where(s => s.TenantId == tenantId).OrderByDescending(s => s.CreatedAt);
         var total = await q.CountAsync();
         var items = await q.Skip((page - 1) * pageSize).Take(pageSize).Include(s => s.Items).ToListAsync();

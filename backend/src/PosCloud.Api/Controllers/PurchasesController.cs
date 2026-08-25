@@ -12,9 +12,17 @@ public class PurchasesController(AppDbContext db) : ControllerBase
     public record PurchaseLine(Guid ProductId, decimal Qty, decimal Cost);
     public record CreatePurchaseReq(Guid TenantId, Guid BranchId, Guid SupplierId, List<PurchaseLine> Lines);
 
+    private Guid ResolveTid(Guid tid)
+    {
+        if (tid != Guid.Empty) return tid;
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct)) return ct;
+        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+    }
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        tenantId = ResolveTid(tenantId);
         var q = db.Set<Purchase>().Where(p => p.TenantId == tenantId).OrderByDescending(p => p.CreatedAt);
         var total = await q.CountAsync();
         var items = await q.Skip((page - 1) * pageSize).Take(pageSize).Include(p => p.Items).ToListAsync();
