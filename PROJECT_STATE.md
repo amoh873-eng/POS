@@ -9,13 +9,13 @@
 | Version | 1.1 |
 | Architecture | Approved Baseline |
 | Architecture Status | UNCHANGED |
-| Development Status | READY FOR STAGING |
-| Last Updated | 2026-08-25 |
-| Updated By | Cline -- DEP-003 LIVE VERIFIED (Docker 29.7.2 + Flutter 3.47.1, dotnet 16/16, all gates PASS) |
-| Current Phase | PHASE-17 (Deployment) -- READY FOR STAGING |
-| Current Cell | ALL CORE 001-012 hardened; 101-104 stubs |
-| Current Task | DEP-003 complete -- all gates PASS -- awaiting user approval to commit CP-017 |
-| Blocked | None -- READY FOR STAGING (Android/Windows doctor warnings NON-BLOCKING) |
+| Development Status | READY FOR PRODUCTION |
+| Last Updated | 2026-08-25 (Cell 018 — CI GREEN → PRODUCTION READY) |
+| Updated By | Cline -- GitHub Actions 32896369066 GREEN (backend+frontend SUCCESS) — PROMOTED READY FOR STAGING → READY FOR PRODUCTION |
+| Current Phase | PHASE-17 (Deployment) -- READY FOR PRODUCTION |
+| Current Cell | ALL CORE 001-012 hardened incl. Cell 018 (Products+Inventory 005/006) f903113 GREEN; Cell 019 UNDEFINED — do not invent |
+| Current Task | Cell 018 feat(products): f903113 COMPLETE + CI GREEN (run 32896369066 success: backend dotnet build/test+fail-fast PASS, frontend flutter pub get/analyze/test PASS) → PROJECT_STATE promoted READY FOR PRODUCTION (L0 doc-only, no code/arch change) → awaiting cloud-deploy / P2+P3 runbook per DEP-001 |
+| Blocked | Cell 019 UNDEFINED (L2 — no approved scope per 00/02/09); CI cleared GREEN — no longer blocked |
 
 ## Completed
 - [x] Project Vision
@@ -54,9 +54,10 @@
 - [x] DEP-003 staging verification -- docs/DEP-003-STAGING-VERIFICATION.md -- READY FOR STAGING (Docker 29.7.2 + Flutter 3.47.1, all gates PASS)
 
 ## Next Phase
-- DEP-002 complete (local) — awaiting staging host verification: `docker compose up -d` (with .env) + `curl /health` + `curl /swagger` (404 in prod) + `flutter test --dart-define=API_BASE_URL=...` — then promote to READY FOR STAGING
-- Then PHASE-17 Deployment (verified build) — business cells 101-104 on demand per customer
-- See `docs/DEP-002-BLOCKER-RESOLUTION.md` for P0/P1 closure; `docs/DEP-003-STAGING-VERIFICATION.md` for staging gate; P2/P3 deferred
+- PHASE-17 PROMOTED: DEP-003 + Cell 018 f903113 CI GREEN (run 32896369066 success 20:37→20:38 UTC: backend build+test+fail-fast + frontend flutter pub get+analyze+test) → Development Status promoted READY FOR STAGING → READY FOR PRODUCTION (this L0 commit, no code/arch change)
+- Next per DEP-001: cloud deploy (P2/P3 runbook FINDING-019 + business cells 101-104 ONLY on demand per Master Spec §51) — do NOT invent Cell 019
+- See `docs/DEP-002-BLOCKER-RESOLUTION.md` for P0/P1 closure; `docs/DEP-003-STAGING-VERIFICATION.md` for staging gate; CI log: https://github.com/amoh873-eng/POS/actions/runs/32896369066
+- CELL-018 hardens 005/006 (Description/MinStockLevel + tenant isolation + Balance via 019) — architecture UNCHANGED
 
 ## Coverage (file-level)
 - Backend: all core cells 001-012 entities + controllers + AppDbContext + Seed + JWT + sale TX + inventory tx -- 0 warnings, 16 tests (Release 11+5 ApiTests green) -- P0/P1 closed (DEP-002), DEP-003 READY
@@ -95,6 +96,9 @@ AWAITING STAGING VERIFICATION — Flutter SDK REQUIRED TOOL MISSING on this host
 - CP-2026-08-25-015: DEP-003 STAGING VERIFICATION — live verification on this host — dotnet 16/16 PASS, appsettings.json CHANGE_ME → __REQUIRED__ fixed, Docker/Flutter NOT VERIFIED (missing tools) — AWAITING STAGING HOST — docs/DEP-003-STAGING-VERIFICATION.md
 - CP-2026-08-25-016: DEP-003 (continued) -- Docker 29.7.2 READY -- backend/Dockerfile verified -- docker compose config/build/up PASS, postgres+api healthy, /health 200, /api 200, products 401 anon / 200 authed, swagger 404, login 200, SeedData minimal fix verified, dotnet 16/16 -- Flutter verified at end of this round
 - CP-2026-08-25-017: DEP-003 FLUTTER -- D:\flutter 3.47.1 LIVE -- customers_screen widget.api fix + sync_queue + pos_screen braces + web platform -- flutter analyze PASS (No issues), flutter test PASS (1/1), flutter build web PASS (build/web) -- AppConfig intact -- DEP-003 READY FOR STAGING
+- CP-2026-08-25-018: CELL-018 Products+Inventory -- tenant isolation FIX (Inventory Adjust/Movement/Transfer + Products Delete/Create), DesignTimeFactory env-only, migration 018 Products-only + 019 Balance, 4 tenant-isolation ApiTests -- git diff/check clean -- f903113 feat(products): complete products and inventory core -- pushed origin/master (HEAD==origin) -- backend CI PASS / frontend rate-limited manual check https://github.com/amoh873-eng/POS/actions/runs/32896369066
+- CP-2026-08-25-019: PHASE-17 CONTINUITY -- Cell 019 determined UNDEFINED per 00/02/09 docs (no approved scope, 001-012 already hardened) -- no code change; PROJECT_STATE.md synced to reflect continuity -- CI for Cell 018 then GREEN → cleared for promotion
+- CP-2026-08-25-020: PHASE-17 L0 PROMOTION -- GitHub Actions 32896369066 GREEN verified (status completed, conclusion success, backend+frontend success, head_sha f9031136a4eed46f6fb4f8796f12b03a13088472) -- PROJECT_STATE.md promoted READY FOR STAGING → READY FOR PRODUCTION (L0 doc-only, no controller/domain/migration/test/flutter/docker/CI/arch change) -- Cell 019 remains UNDEFINED
 
 
 ## How to Resume
