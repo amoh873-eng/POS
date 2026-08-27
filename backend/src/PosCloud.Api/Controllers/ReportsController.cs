@@ -58,8 +58,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
         tenantId = ResolveTid(tenantId);
         var q = db.InventoryStocks.Where(s=>s.TenantId==tenantId);
         if(branchId!=null) q=q.Where(s=>s.BranchId==branchId);
-        var items = await q.Include(s=>s.ProductId).ToListAsync();
-        // join manually for InMemory
+        // removed invalid Include(s=>s.ProductId) — ProductId is scalar, not navigation
         var prods = await db.Products.Where(p=>p.TenantId==tenantId).ToDictionaryAsync(p=>p.Id);
         var list = (await q.ToListAsync()).Select(s=>{
             prods.TryGetValue(s.ProductId, out var p);

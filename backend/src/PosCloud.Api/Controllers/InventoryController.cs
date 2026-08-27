@@ -48,18 +48,16 @@ public class InventoryController(AppDbContext db) : ControllerBase
         var items = await q.ToListAsync();
         return Ok(new { data = items });
     }
+    public record AdjustReq(Guid BranchId, Guid ProductId, decimal QtyDelta, string? Type);
     [HttpPost("adjust")]
-    public async Task<IActionResult> Adjust([FromBody] InventoryMovement dto)
+    public async Task<IActionResult> Adjust([FromBody] AdjustReq req)
     {
         var tid = ResolveTid(Guid.Empty);
-        dto.TenantId = tid;
-        var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == tid && s.BranchId == dto.BranchId && s.ProductId == dto.ProductId);
-        if (stock == null) { stock = new InventoryStock { TenantId = tid, BranchId = dto.BranchId, ProductId = dto.ProductId, QtyOnHand = 0, LowStockThreshold = 0 }; db.InventoryStocks.Add(stock); }
-        dto.Type = "adjust";
-        stock.QtyOnHand += dto.QtyDelta;
+        var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == tid && s.BranchId == req.BranchId && s.ProductId == req.ProductId);
+        if (stock == null) { stock = new InventoryStock { TenantId = tid, BranchId = req.BranchId, ProductId = req.ProductId, QtyOnHand = 0, LowStockThreshold = 0 }; db.InventoryStocks.Add(stock); }
+        stock.QtyOnHand += req.QtyDelta;
         if (stock.QtyOnHand < 0) return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = "Negative stock not allowed" } });
-        dto.CreatedAt = DateTime.UtcNow;
-        db.InventoryMovements.Add(dto);
+        var dto = new InventoryMovement { TenantId = tid, BranchId = req.BranchId, ProductId = req.ProductId, QtyDelta = req.QtyDelta, Type = "adjust", CreatedAt = DateTime.UtcNow };
         await db.SaveChangesAsync();
         return Ok(new { data = dto });
     }
@@ -85,20 +83,27 @@ public class InventoryController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> Transfer([FromBody] TransferReq req)
     {
         var tid = ResolveTid(Guid.Empty);
-        using var tx = await db.Database.BeginTransactionAsync();
-        foreach (var line in req.Lines)
+        var strategy = db.Database.CreateExecutionStrategy();
+        string? insufficient = null;
+        await strategy.ExecuteAsync(async () =>
         {
-            var from = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == tid && s.BranchId == req.FromBranchId && s.ProductId == line.ProductId);
-            if (from == null || from.QtyOnHand < line.Qty) { await tx.RollbackAsync(); return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Insufficient {line.ProductId}" } }); }
-            from.QtyOnHand -= line.Qty;
-            var to = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == tid && s.BranchId == req.ToBranchId && s.ProductId == line.ProductId);
-            if (to == null) { to = new InventoryStock { TenantId = tid, BranchId = req.ToBranchId, ProductId = line.ProductId, QtyOnHand = 0 }; db.InventoryStocks.Add(to); }
-            to.QtyOnHand += line.Qty;
-            db.InventoryMovements.Add(new InventoryMovement { TenantId = tid, BranchId = req.FromBranchId, ProductId = line.ProductId, Type = "transfer_out", QtyDelta = -line.Qty, RefType = "transfer" });
-            db.InventoryMovements.Add(new InventoryMovement { TenantId = tid, BranchId = req.ToBranchId, ProductId = line.ProductId, Type = "transfer_in", QtyDelta = line.Qty, RefType = "transfer" });
-        }
-        await db.SaveChangesAsync();
-        await tx.CommitAsync();
+            await using var tx = await db.Database.BeginTransactionAsync();
+            foreach (var line in req.Lines)
+            {
+                var from = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == tid && s.BranchId == req.FromBranchId && s.ProductId == line.ProductId);
+                if (from == null || from.QtyOnHand < line.Qty) { insufficient = line.ProductId.ToString(); await tx.RollbackAsync(); return; }
+                from.QtyOnHand -= line.Qty;
+                var to = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == tid && s.BranchId == req.ToBranchId && s.ProductId == line.ProductId);
+                if (to == null) { to = new InventoryStock { TenantId = tid, BranchId = req.ToBranchId, ProductId = line.ProductId, QtyOnHand = 0 }; db.InventoryStocks.Add(to); }
+                to.QtyOnHand += line.Qty;
+                db.InventoryMovements.Add(new InventoryMovement { TenantId = tid, BranchId = req.FromBranchId, ProductId = line.ProductId, Type = "transfer_out", QtyDelta = -line.Qty, RefType = "transfer" });
+                db.InventoryMovements.Add(new InventoryMovement { TenantId = tid, BranchId = req.ToBranchId, ProductId = line.ProductId, Type = "transfer_in", QtyDelta = line.Qty, RefType = "transfer" });
+            }
+            if (insufficient != null) return;
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+        });
+        if (insufficient != null) return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Insufficient {insufficient}" } });
         return Ok(new { data = new { ok = true } });
     }
 

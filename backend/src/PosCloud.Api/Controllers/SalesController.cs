@@ -91,26 +91,42 @@ public class SalesController(AppDbContext db) : ControllerBase
         foreach (var p in req.Payments)
             sale.Payments.Add(new Payment { TenantId = req.TenantId, SaleId = sale.Id, Method = p.Method, Amount = p.Amount, Provider = p.Provider, ProviderRef = p.ProviderRef });
 
-        // Simple stock check + deduction (transactional)
-        using var tx = await db.Database.BeginTransactionAsync();
-        foreach (var item in sale.Items)
+        // Transactional — compatible with Npgsql RetryingExecutionStrategy (EnableRetryOnFailure)
+        var strategy = db.Database.CreateExecutionStrategy();
+        Sale? committedSale = null;
+        Guid? insufficientPid = null;
+        await strategy.ExecuteAsync(async () =>
         {
-            var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == req.TenantId && s.BranchId == req.BranchId && s.ProductId == item.ProductId);
-            if (stock == null || stock.QtyOnHand < item.Qty)
+            await using var tx = await db.Database.BeginTransactionAsync();
+            var ok = true;
+            foreach (var item in sale.Items)
+            {
+                var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == req.TenantId && s.BranchId == req.BranchId && s.ProductId == item.ProductId);
+                if (stock == null || stock.QtyOnHand < item.Qty)
+                {
+                    insufficientPid = item.ProductId;
+                    ok = false;
+                    break;
+                }
+                stock.QtyOnHand -= item.Qty;
+                db.InventoryMovements.Add(new InventoryMovement
+                {
+                    TenantId = req.TenantId, BranchId = req.BranchId, ProductId = item.ProductId, Type = "sale", QtyDelta = -item.Qty, RefType = "sale", RefId = sale.Id
+                });
+            }
+            if (!ok)
             {
                 await tx.RollbackAsync();
-                return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Product {item.ProductId} insufficient" } });
+                return;
             }
-            stock.QtyOnHand -= item.Qty;
-            db.InventoryMovements.Add(new InventoryMovement
-            {
-                TenantId = req.TenantId, BranchId = req.BranchId, ProductId = item.ProductId, Type = "sale", QtyDelta = -item.Qty, RefType = "sale", RefId = sale.Id
-            });
-        }
-        db.Sales.Add(sale);
-        await db.SaveChangesAsync();
-        await tx.CommitAsync();
-        return Created($"/api/sales/{sale.Id}", new { data = sale });
+            db.Sales.Add(sale);
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+            committedSale = sale;
+        });
+        if (insufficientPid != null)
+            return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Product {insufficientPid} insufficient" } });
+        return Created($"/api/sales/{committedSale!.Id}", new { data = committedSale });
     }
 
     [HttpGet]

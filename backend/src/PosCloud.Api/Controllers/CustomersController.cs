@@ -32,6 +32,8 @@ public class CustomersController(AppDbContext db) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Customer dto)
     {
+        var tid = ResolveTid(Guid.Empty);
+        dto.TenantId = tid;
         db.Customers.Add(dto);
         await db.SaveChangesAsync();
         return Created($"/api/customers/{dto.Id}", new { data = dto });
@@ -41,7 +43,10 @@ public class CustomersController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> Get(Guid id)
     {
         var c = await db.Customers.FindAsync(id);
-        return c == null ? NotFound() : Ok(new { data = c });
+        if (c == null) return NotFound();
+        var tid = ResolveTid(Guid.Empty);
+        if (c.TenantId != tid) return NotFound();
+        return Ok(new { data = c });
     }
 
     [HttpPost("{id}/pay")]
@@ -49,6 +54,8 @@ public class CustomersController(AppDbContext db) : ControllerBase
     {
         var c = await db.Customers.FindAsync(id);
         if (c == null) return NotFound();
+        var tid = ResolveTid(Guid.Empty);
+        if (c.TenantId != tid) return NotFound();
         c.Balance -= req.Amount;
         db.Payments.Add(new Payment { TenantId = c.TenantId, Method = "credit_settle", Amount = req.Amount, ProviderRef = $"customer:{id}" });
         await db.SaveChangesAsync();

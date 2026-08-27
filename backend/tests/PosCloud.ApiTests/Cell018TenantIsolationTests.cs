@@ -105,6 +105,52 @@ public class Cell018TenantIsolationTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task Customer_Create_Ignores_Client_Tenant()
+    {
+        using var sc = _f.Services.CreateScope();
+        var db = sc.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Tenants.AnyAsync()) return;
+        var tidA = await db.Tenants.Select(x => x.Id).FirstAsync();
+        var tidB = Guid.NewGuid();
+        db.Tenants.Add(new PosCloud.Domain.Entities.Tenant { Id = tidB, Name = "CT-CUST", Slug = $"ct-cust-{tidB:N}"[..12], IsActive = true });
+        await db.SaveChangesAsync();
+        var tok = Jwt(tidA, Guid.NewGuid());
+        var cl = _f.CreateClient();
+        cl.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok);
+        var evil = new { tenantId = tidB, name = "SpoofCust", phone = "0700000000", creditLimit = 0m };
+        var res = await cl.PostAsJsonAsync("/api/customers", evil);
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await res.Content.ReadAsStringAsync();
+        body.Should().Contain(tidA.ToString());
+        body.Should().NotContain(tidB.ToString());
+        (await db.Customers.CountAsync(c => c.TenantId == tidB)).Should().Be(0);
+        (await db.Customers.CountAsync(c => c.TenantId == tidA)).Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Customer_Get_CrossTenant_NotFound()
+    {
+        using var sc = _f.Services.CreateScope();
+        var db = sc.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Tenants.AnyAsync()) return;
+        var tidA = await db.Tenants.Select(x => x.Id).FirstAsync();
+        var custA = await db.Customers.Where(c => c.TenantId == tidA).Select(c => c.Id).FirstOrDefaultAsync();
+        if (custA == Guid.Empty)
+        {
+            var c = new PosCloud.Domain.Entities.Customer { TenantId = tidA, Name = "T1Cust", Phone = "0711111111" };
+            db.Customers.Add(c); await db.SaveChangesAsync(); custA = c.Id;
+        }
+        var tidB = Guid.NewGuid();
+        db.Tenants.Add(new PosCloud.Domain.Entities.Tenant { Id = tidB, Name = "CT-CUST2", Slug = $"ct-c2-{tidB:N}"[..12], IsActive = true });
+        await db.SaveChangesAsync();
+        var tok = Jwt(tidB, Guid.NewGuid());
+        var cl = _f.CreateClient();
+        cl.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok);
+        var res = await cl.GetAsync($"/api/customers/{custA}");
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Inventory_Transfer_Ignores_Client_Tenant()
     {
         using var sc = _f.Services.CreateScope();
