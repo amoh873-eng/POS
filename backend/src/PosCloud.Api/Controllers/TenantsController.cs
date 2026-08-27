@@ -29,13 +29,12 @@ public class TenantsController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> Me()
     {
         var tidClaim = User.FindFirst("tid")?.Value;
-        if (Guid.TryParse(tidClaim, out var tid))
+        if (Guid.TryParse(tidClaim, out var tid) && tid != Guid.Empty)
         {
             var t = await db.Tenants.FindAsync(tid);
             if (t != null) return Ok(new { data = t });
+            return NotFound(new { error = new { code = "NOT_FOUND", message = "Tenant not found" } });
         }
-        var first = await db.Tenants.FirstOrDefaultAsync();
-        if (first == null) return NotFound(new { error = new { code = "NOT_FOUND", message = "No tenant" } });
-        return Ok(new { data = first });
+        return Unauthorized(new { error = new { code = "UNAUTHORIZED", message = "Missing tenant claim" } });
     }
 }

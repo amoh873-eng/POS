@@ -10,12 +10,11 @@ namespace PosCloud.Api.Controllers;
 [Authorize]
 public class ProductsController(AppDbContext db) : ControllerBase
 {
-    private Guid ResolveTenant(Guid? qTid)
+    private Guid ResolveTenant(Guid? _ignored)
     {
-        if (qTid != null && qTid != Guid.Empty) return qTid.Value;
         var tidClaim = User.FindFirst("tid")?.Value;
-        if (Guid.TryParse(tidClaim, out var tid)) return tid;
-        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+        if (Guid.TryParse(tidClaim, out var tid) && tid != Guid.Empty) return tid;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
     }
     private bool IsSkuDup(Guid tid, string sku, Guid? exclude = null) => db.Products.Any(p => p.TenantId == tid && p.Sku == sku && !p.IsDeleted && (exclude == null || p.Id != exclude));
     private bool IsBarcodeDup(Guid tid, string? bc, Guid? exclude = null) => !string.IsNullOrWhiteSpace(bc) && db.Products.Any(p => p.TenantId == tid && p.BarcodeMain == bc && !p.IsDeleted && (exclude == null || p.Id != exclude));

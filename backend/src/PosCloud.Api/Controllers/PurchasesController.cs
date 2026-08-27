@@ -14,12 +14,11 @@ public class PurchasesController(AppDbContext db) : ControllerBase
     public record PurchaseLine(Guid ProductId, decimal Qty, decimal Cost);
     public record CreatePurchaseReq(Guid TenantId, Guid BranchId, Guid SupplierId, List<PurchaseLine> Lines);
 
-    private Guid ResolveTid(Guid tid)
+    private Guid ResolveTid(Guid _ignored)
     {
-        if (tid != Guid.Empty) return tid;
         var claim = User.FindFirst("tid")?.Value;
-        if (Guid.TryParse(claim, out var ct)) return ct;
-        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+        if (Guid.TryParse(claim, out var ct) && ct != Guid.Empty) return ct;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
     }
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
@@ -34,7 +33,8 @@ public class PurchasesController(AppDbContext db) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePurchaseReq req)
     {
-        var purchase = new Purchase { TenantId = req.TenantId, BranchId = req.BranchId, SupplierId = req.SupplierId };
+        var tid = ResolveTid(req.TenantId);
+        var purchase = new Purchase { TenantId = tid, BranchId = req.BranchId, SupplierId = req.SupplierId };
         foreach (var l in req.Lines)
             purchase.Items.Add(new PurchaseItem { PurchaseId = purchase.Id, ProductId = l.ProductId, Qty = l.Qty, Cost = l.Cost });
         purchase.Subtotal = purchase.Items.Sum(i => i.LineTotal);
@@ -49,6 +49,8 @@ public class PurchasesController(AppDbContext db) : ControllerBase
     {
         var p = await db.Set<Purchase>().Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id);
         if (p == null) return NotFound();
+        var tid = ResolveTid(Guid.Empty);
+        if (p.TenantId != tid) return NotFound();
         if (p.Status == "received") return BadRequest(new { error = new { code = "ALREADY_RECEIVED", message = "Already received" } });
         using var tx = await db.Database.BeginTransactionAsync();
         foreach (var item in p.Items)

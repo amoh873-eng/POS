@@ -27,12 +27,11 @@ public class SyncController(AppDbContext db) : ControllerBase
         return Ok(new { data = results });
     }
 
-    private Guid ResolveTid(Guid tid)
+    private Guid ResolveTid(Guid _ignored)
     {
-        if (tid != Guid.Empty) return tid;
         var claim = User.FindFirst("tid")?.Value;
-        if (Guid.TryParse(claim, out var ct)) return ct;
-        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+        if (Guid.TryParse(claim, out var ct) && ct != Guid.Empty) return ct;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
     }
     [HttpGet("pull")]
     public async Task<IActionResult> Pull([FromQuery] Guid tenantId, [FromQuery] DateTime? since)

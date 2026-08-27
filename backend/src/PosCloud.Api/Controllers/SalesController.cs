@@ -14,10 +14,9 @@ public class SalesController(AppDbContext db) : ControllerBase
 {
     private Guid ResolveTid(Guid tid)
     {
-        if (tid != Guid.Empty) return tid;
         var claim = User.FindFirst("tid")?.Value;
-        if (Guid.TryParse(claim, out var ct)) return ct;
-        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+        if (Guid.TryParse(claim, out var ct) && ct != Guid.Empty) return ct;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
     }
     public record SaleLineReq(Guid ProductId, decimal Qty, decimal? UnitPrice, decimal? Discount);
     public record PaymentReq(string Method, decimal Amount, string? Provider, string? ProviderRef);
@@ -144,6 +143,8 @@ public class SalesController(AppDbContext db) : ControllerBase
     {
         var s = await db.Sales.Include(x => x.Items).Include(x => x.Payments).FirstOrDefaultAsync(x => x.Id == id);
         if (s == null) return NotFound();
+        var tid = ResolveTid(Guid.Empty);
+        if (s.TenantId != tid) return NotFound();
         return Ok(new { data = s });
     }
 

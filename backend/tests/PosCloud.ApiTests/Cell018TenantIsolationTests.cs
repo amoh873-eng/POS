@@ -151,6 +151,95 @@ public class Cell018TenantIsolationTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task Supplier_Create_Ignores_Client_Tenant()
+    {
+        using var sc = _f.Services.CreateScope();
+        var db = sc.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Tenants.AnyAsync()) return;
+        var tidA = await db.Tenants.Select(x => x.Id).FirstAsync();
+        var tidB = Guid.NewGuid();
+        db.Tenants.Add(new PosCloud.Domain.Entities.Tenant { Id = tidB, Name = "CT-SUP", Slug = $"ct-sup-{tidB:N}"[..12], IsActive = true });
+        await db.SaveChangesAsync();
+        var tok = Jwt(tidA, Guid.NewGuid());
+        var cl = _f.CreateClient();
+        cl.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok);
+        var evil = new { tenantId = tidB, name = "SpoofSup" };
+        var res = await cl.PostAsJsonAsync("/api/suppliers", evil);
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await res.Content.ReadAsStringAsync();
+        body.Should().Contain(tidA.ToString());
+        body.Should().NotContain(tidB.ToString());
+        (await db.Suppliers.CountAsync(s => s.TenantId == tidB)).Should().Be(0);
+        (await db.Suppliers.CountAsync(s => s.TenantId == tidA)).Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Supplier_Get_CrossTenant_NotFound()
+    {
+        using var sc = _f.Services.CreateScope();
+        var db = sc.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Tenants.AnyAsync()) return;
+        var tidA = await db.Tenants.Select(x => x.Id).FirstAsync();
+        var supA = await db.Suppliers.Where(s => s.TenantId == tidA).Select(s => s.Id).FirstOrDefaultAsync();
+        if (supA == Guid.Empty)
+        {
+            var s = new PosCloud.Domain.Entities.Supplier { TenantId = tidA, Name = "T1Sup" };
+            db.Suppliers.Add(s); await db.SaveChangesAsync(); supA = s.Id;
+        }
+        var tidB = Guid.NewGuid();
+        db.Tenants.Add(new PosCloud.Domain.Entities.Tenant { Id = tidB, Name = "CT-SUP2", Slug = $"ct-s2-{tidB:N}"[..12], IsActive = true });
+        await db.SaveChangesAsync();
+        var tok = Jwt(tidB, Guid.NewGuid());
+        var cl = _f.CreateClient();
+        cl.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok);
+        var res = await cl.GetAsync($"/api/suppliers/{supA}");
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Missing_Tenant_Claim_Rejected()
+    {
+        using var sc = _f.Services.CreateScope();
+        var db = sc.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Tenants.AnyAsync()) return;
+        var k = "DEV_ONLY_NOT_FOR_PRODUCTION_32+_CHANGE_ME_LOCAL_DEV_KEY_1234567890";
+        var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(
+            new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(k)),
+            Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+        var t = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: "PosCloud", audience: "PosCloud",
+            claims: new[] { new System.Security.Claims.Claim("uid", Guid.NewGuid().ToString()) },
+            expires: DateTime.UtcNow.AddMinutes(15), signingCredentials: creds);
+        var tok = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(t);
+        var cl = _f.CreateClient();
+        cl.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok);
+        var res = await cl.GetAsync("/api/products?page=1&pageSize=1");
+        res.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Product_QuerySpoof_Ignored()
+    {
+        using var sc = _f.Services.CreateScope();
+        var db = sc.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Tenants.AnyAsync()) return;
+        var tidA = await db.Tenants.Select(x => x.Id).FirstAsync();
+        var tidB = Guid.NewGuid();
+        db.Tenants.Add(new PosCloud.Domain.Entities.Tenant { Id = tidB, Name = "CT-QS", Slug = $"ct-qs-{tidB:N}"[..12], IsActive = true });
+        await db.SaveChangesAsync();
+        var prodB = new PosCloud.Domain.Entities.Product { TenantId = tidB, NameAr = "SpoofProd", NameEn = "SpoofProd", Sku = $"QS-{Guid.NewGuid():N}"[..8], SellPrice = 10, CostPrice = 5 };
+        db.Products.Add(prodB); await db.SaveChangesAsync();
+        var tok = Jwt(tidA, Guid.NewGuid());
+        var cl = _f.CreateClient();
+        cl.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok);
+        var res = await cl.GetAsync($"/api/products?tenantId={tidB}&page=1&pageSize=100");
+        res.EnsureSuccessStatusCode();
+        var body = await res.Content.ReadAsStringAsync();
+        body.Should().NotContain(prodB.Id.ToString());
+        body.Should().NotContain(tidB.ToString());
+    }
+
+    [Fact]
     public async Task Inventory_Transfer_Ignores_Client_Tenant()
     {
         using var sc = _f.Services.CreateScope();

@@ -11,9 +11,16 @@ namespace PosCloud.Api.Controllers;
 [Route("api/stock-counts")]
 public class StockCountsController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid _ignored)
+    {
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct) && ct != Guid.Empty) return ct;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
+    }
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] Guid? branchId)
     {
+        tenantId = ResolveTid(tenantId);
         var q = db.StockCounts.Where(s => s.TenantId == tenantId);
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
         return Ok(new { data = await q.ToListAsync() });
@@ -22,6 +29,7 @@ public class StockCountsController(AppDbContext db) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] StockCount dto)
     {
+        dto.TenantId = ResolveTid(dto.TenantId);
         db.StockCounts.Add(dto);
         await db.SaveChangesAsync();
         return Created($"/api/stock-counts/{dto.Id}", new { data = dto });

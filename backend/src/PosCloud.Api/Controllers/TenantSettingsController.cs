@@ -10,9 +10,17 @@ namespace PosCloud.Api.Controllers;
 [Route("api/tenant-settings")]
 public class TenantSettingsController(AppDbContext db) : ControllerBase
 {
+    private Guid ResolveTid(Guid _ignored)
+    {
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct) && ct != Guid.Empty) return ct;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
+    }
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> Get([FromQuery] Guid tenantId)
     {
+        tenantId = ResolveTid(tenantId);
         var s = await db.TenantSettings.FindAsync(tenantId);
         return Ok(new { data = s });
     }
@@ -21,6 +29,7 @@ public class TenantSettingsController(AppDbContext db) : ControllerBase
     [Authorize]
     public async Task<IActionResult> Patch([FromQuery] Guid tenantId, [FromBody] TenantSettings dto)
     {
+        tenantId = ResolveTid(tenantId);
         var s = await db.TenantSettings.FindAsync(tenantId);
         if (s == null) { dto.TenantId = tenantId; db.TenantSettings.Add(dto); }
         else

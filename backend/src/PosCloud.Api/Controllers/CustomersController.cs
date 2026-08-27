@@ -13,10 +13,9 @@ public class CustomersController(AppDbContext db) : ControllerBase
 {
     private Guid ResolveTid(Guid tid)
     {
-        if (tid != Guid.Empty) return tid;
         var claim = User.FindFirst("tid")?.Value;
-        if (Guid.TryParse(claim, out var ct)) return ct;
-        return db.Tenants.Select(t => t.Id).FirstOrDefault();
+        if (Guid.TryParse(claim, out var ct) && ct != Guid.Empty) return ct;
+        throw new UnauthorizedAccessException("Missing or invalid tenant claim");
     }
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)

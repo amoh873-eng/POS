@@ -8,6 +8,13 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
     public async Task Invoke(HttpContext ctx)
     {
         try { await next(ctx); }
+        catch (UnauthorizedAccessException ex)
+        {
+            ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            ctx.Response.ContentType = "application/json";
+            var payload = new { error = new { code = "UNAUTHORIZED", message = ex.Message, traceId = ctx.TraceIdentifier } };
+            await ctx.Response.WriteAsync(JsonSerializer.Serialize(payload));
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled {TraceId} {Path}", ctx.TraceIdentifier, ctx.Request.Path);
