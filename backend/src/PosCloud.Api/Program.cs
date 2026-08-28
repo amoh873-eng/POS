@@ -52,12 +52,26 @@ if (jwtKey.Length < 32)
     throw new InvalidOperationException("Jwt:Key must be >=32 characters.");
 builder.Services.AddAuthentication("Bearer").AddJwtBearer(o =>
 {
+    o.MapInboundClaims = false;
     o.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
     {
         ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "PosCloud",
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "PosCloud",
-        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey))
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey)),
+        NameClaimType = "uid",
+        RoleClaimType = "role",
+        ClockSkew = TimeSpan.FromMinutes(1)
+    };
+    o.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnAuthenticationFailed = ctx =>
+        {
+            // Kept minimal to avoid log noise in prod — Development only
+            if (builder.Environment.IsDevelopment())
+                Console.WriteLine($"[JWT FAIL] {ctx.Exception.GetType().Name}: {ctx.Exception.Message}");
+            return Task.CompletedTask;
+        }
     };
 });
 builder.Services.AddAuthorization();
@@ -108,7 +122,21 @@ forwarded.KnownProxies.Clear();
 app.UseForwardedHeaders(forwarded);
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // CORS for images served via /uploads — allow any origin for product images (safe for LAN)
+        if (ctx.Context.Request.Path.StartsWithSegments("/uploads"))
+        {
+            ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            ctx.Context.Response.Headers["Access-Control-Allow-Methods"] = "GET, OPTIONS";
+        }
+        // Cache product images for 7 days on client
+        if (ctx.Context.Request.Path.StartsWithSegments("/uploads/products"))
+            ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=604800";
+    }
+});
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

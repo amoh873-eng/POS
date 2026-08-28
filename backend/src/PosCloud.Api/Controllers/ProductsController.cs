@@ -47,6 +47,35 @@ public class ProductsController(AppDbContext db) : ControllerBase
         return Ok(new { data = p });
     }
 
+    public record ImageUploadReq(string ImageBase64, string? FileName);
+
+    [HttpPost("{id}/image")]
+    public async Task<IActionResult> UploadImage(Guid id, [FromBody] ImageUploadReq req)
+    {
+        var p = await db.Products.FindAsync(id);
+        if (p == null || p.IsDeleted) return NotFound(new { error = new { code = "NOT_FOUND", message = "Product not found" } });
+        var claim = User.FindFirst("tid")?.Value;
+        if (Guid.TryParse(claim, out var ct) && p.TenantId != ct) return NotFound(new { error = new { code = "NOT_FOUND", message = "Product not found" } });
+        if (string.IsNullOrWhiteSpace(req.ImageBase64)) return BadRequest(new { error = new { code = "VALIDATION_ERROR", message = "ImageBase64 required" } });
+        var base64 = req.ImageBase64;
+        if (base64.Contains(",")) base64 = base64.Split(",").Last();
+        byte[] bytes;
+        try { bytes = Convert.FromBase64String(base64); } catch { return BadRequest(new { error = new { code = "VALIDATION_ERROR", message = "Invalid base64" } }); }
+        if (bytes.Length > 2 * 1024 * 1024) return BadRequest(new { error = new { code = "VALIDATION_ERROR", message = "Image too large (max 2MB)" } });
+        var ext = Path.GetExtension(req.FileName ?? ".jpg").ToLowerInvariant();
+        if (ext is not ".jpg" and not ".jpeg" and not ".png" and not ".webp" and not ".gif") ext = ".jpg";
+        var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products");
+        Directory.CreateDirectory(dir);
+        var fileName = $"{id}{ext}";
+        var path = Path.Combine(dir, fileName);
+        await System.IO.File.WriteAllBytesAsync(path, bytes);
+        // Also ensure container volume is writable after restart
+        p.ImageUrl = $"/uploads/products/{fileName}";
+        p.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { data = new { imageUrl = p.ImageUrl } });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] PosCloud.Domain.Entities.Product dto)
     {

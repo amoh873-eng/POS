@@ -17,6 +17,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports: ["5000:8080"]
+    volumes: ["api_uploads:/app/wwwroot/uploads"]
     environment:
       ConnectionStrings__Default: "Host=postgres;Database=${POSTGRES_DB:-poscloud};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?required}"
       ASPNETCORE_ENVIRONMENT: "Production"
@@ -32,3 +33,4 @@ services:
 
 volumes:
   pgdata:
+  api_uploads:

@@ -18,22 +18,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
   DateTime _to = DateTime.now();
   bool _loading = true;
   String? _err;
-  String? _tid;
-  Future<void> _bootstrap() async {
-    try { final t = await widget.api.get('/api/tenants'); if (t['data'] is List && (t['data'] as List).isNotEmpty) _tid = t['data'][0]['id']; } catch (_) {}
-    await _load();
-  }
+  Future<void> _bootstrap() async { await _load(); }
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() { _loading = true; _err = null; });
     try {
-      final qp = _tid != null ? 'tenantId=$_tid' : '';
-      final daily = await widget.api.get('/api/reports/daily-sales?${qp.isNotEmpty ? "$qp&" : ""}date=${_to.toIso8601String()}');
-      final profit = await widget.api.get('/api/reports/profit?${qp.isNotEmpty ? "$qp&" : ""}from=${_from.toIso8601String()}&to=${_to.toIso8601String()}');
-      final top = await widget.api.get('/api/reports/top-products?${qp.isNotEmpty ? "$qp&" : ""}from=${_from.toIso8601String()}&to=${_to.toIso8601String()}&take=5');
-      final inv = await widget.api.get('/api/reports/inventory?${qp.isNotEmpty ? qp : ""}');
+      // Use explicit UTC date for daily-sales
+      final utcTo = _to.toUtc().toIso8601String();
+      final utcFrom = _from.toUtc().toIso8601String();
+      final daily = await widget.api.get('/api/reports/daily-sales?date=$utcTo');
+      final profit = await widget.api.get('/api/reports/profit?from=$utcFrom&to=$utcTo');
+      final top = await widget.api.get('/api/reports/top-products?from=$utcFrom&to=$utcTo&take=5');
+      final inv = await widget.api.get('/api/reports/inventory');
+      if (!mounted) return;
       setState(() { _daily = daily['data']; _profit = profit['data']; _top = top['data'] ?? []; _inv = inv['data'] is List ? inv['data'] : []; });
-    } catch (e) { setState(() => _err = e.toString()); }
-    setState(() => _loading = false);
+    } catch (e) { if (mounted) setState(() => _err = e.toString()); }
+    if (mounted) setState(() => _loading = false);
   }
   @override
   void initState() { super.initState(); _bootstrap(); }

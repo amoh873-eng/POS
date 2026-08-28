@@ -12,21 +12,30 @@ class ApiClient {
       };
 
   Future<dynamic> get(String path) async {
-    final r = await http.get(Uri.parse('$baseUrl$path'), headers: headers);
-    if (r.body.isEmpty) return {};
+    final r = await http.get(Uri.parse('$baseUrl$path'), headers: headers).timeout(const Duration(seconds: 10));
+    if (r.body.isEmpty) {
+      if (r.statusCode >= 400) throw Exception('HTTP ${r.statusCode}');
+      return {};
+    }
     try { return jsonDecode(r.body); } catch (_) { return {'raw': r.body, 'status': r.statusCode}; }
   }
 
   Future<dynamic> post(String path, dynamic body, {Map<String, String>? extraHeaders}) async {
     final h = {...headers, ...?extraHeaders};
-    final r = await http.post(Uri.parse('$baseUrl$path'), headers: h, body: jsonEncode(body));
-    if (r.body.isEmpty) return {};
+    final r = await http.post(Uri.parse('$baseUrl$path'), headers: h, body: jsonEncode(body)).timeout(const Duration(seconds: 10));
+    if (r.body.isEmpty) {
+      if (r.statusCode >= 400) throw Exception('HTTP ${r.statusCode}');
+      return {};
+    }
     try { return jsonDecode(r.body); } catch (_) { return {'raw': r.body, 'status': r.statusCode}; }
   }
 
   Future<dynamic> patch(String path, dynamic body) async {
-    final r = await http.patch(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body));
-    if (r.body.isEmpty) return {};
+    final r = await http.patch(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 10));
+    if (r.body.isEmpty) {
+      if (r.statusCode >= 400) throw Exception('HTTP ${r.statusCode}');
+      return {};
+    }
     try { return jsonDecode(r.body); } catch (_) { return {'raw': r.body, 'status': r.statusCode}; }
   }
 }

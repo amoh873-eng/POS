@@ -17,15 +17,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() { _loading = true; _err = null; });
     try {
-      final res = await widget.api.post('/api/auth/login', {'email': _email.text, 'password': _pass.text});
+      final res = await widget.api.post('/api/auth/login', {'email': _email.text.trim(), 'password': _pass.text});
       if (res['data'] != null && res['data']['access_token'] != null) {
         widget.api.token = res['data']['access_token'];
-        widget.onLogin();
+        if (mounted) widget.onLogin();
+      } else if (res['error'] != null) {
+        setState(() => _err = res['error']['message'] ?? res.toString());
       } else {
         setState(() => _err = res.toString());
       }
-    } catch (e) { setState(() => _err = e.toString()); }
-    setState(() => _loading = false);
+    } catch (e) { if (mounted) setState(() => _err = e.toString()); }
+    if (mounted) setState(() => _loading = false);
   }
   @override
   Widget build(BuildContext context) {

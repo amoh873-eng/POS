@@ -1,161 +1,46 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Restaurant POS</title><link rel="manifest" href="/manifest.json"/><meta name="theme-color" content="#22C55E"/><style>
-:root{--bg:#F4F5F9;--card:#fff;--border:#E5E7EB;--text:#0F172A;--muted:#6B7280;--green:#22C55E;--green-dark:#16A34A;--yellow:#FACC15;--red:#DC2626}
-*{box-sizing:border-box;font-family:Inter,Segoe UI,Tahoma,sans-serif}body{margin:0;background:var(--bg);color:var(--text)}
-body.dark{--bg:#0B0F12;--card:#11181D;--border:#1F2A32;--text:#E5E7EB;--muted:#94A3B8}
-a{color:var(--muted);text-decoration:none}
-.topbar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-.brand{font-weight:900;letter-spacing:.2px}.brand span{color:var(--green)}
-.search{flex:1;max-width:520px;display:flex}
-.search input{flex:1;padding:10px 12px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px 0 0 10px}
-.sbtn{width:42px;border:1px solid var(--green);background:#DCFCE7;color:var(--green-dark);border-radius:0 10px 10px 0;cursor:pointer}
-.icon{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--bg);display:grid;place-items:center;cursor:pointer}
-.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--green);background:var(--green);color:#fff;font-weight:700;cursor:pointer}
-.btn.ghost{background:transparent;color:var(--text);border-color:var(--border)}
-.layout{display:grid;grid-template-columns:210px 1fr 360px;min-height:calc(100vh - 56px)}
-@media(max-width:1100px){.layout{grid-template-columns:180px 1fr 320px}}
-@media(max-width:860px){.layout{grid-template-columns:1fr} .sidebar{display:none} .bill{order:3}}
-.sidebar{background:var(--card);border-right:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px}
-.user{text-align:center}
-.avatar{width:64px;height:64px;border-radius:18px;background:#FEF3C7;display:grid;place-items:center;font-size:28px;margin:0 auto}
-.nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.nav button{padding:10px;border:1px solid var(--border);background:var(--bg);border-radius:14px;cursor:pointer}
-.nav button.active{background:var(--green);color:#fff;border-color:var(--green)}
-</style></head><body>
-<div class="topbar">
-  <div class="brand" id="brandTitle"><span>Rest</span>aurant</div>
-  <div class="search"><input id="searchInput" placeholder="Search Categories or Menu..." onkeydown="if(event.key==='Enter') doSearch()"/><button class="sbtn" onclick="doSearch()">&#128269;</button></div>
-  <button class="icon" title="QR">▦</button><button class="icon" title="Notify">🔔</button>
-  <select id="businessType" onchange="switchBusiness(this.value)" style="padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--card)"><option value="restaurant">🍽 Restaurant</option><option value="supermarket">🛒 Supermarket</option><option value="pharmacy">💊 Pharmacy</option><option value="bakery">🥖 Bakery</option><option value="retail">🏪 Retail</option></select>
-  <button class="btn" onclick="seedDemo()">+ Add New Item</button>
-  <div style="margin-left:auto;text-align:right"><div style="font-weight:800" id="orderTitle">Order #123</div><div class="muted" style="font-size:.75rem">Opened 8:00am</div></div>
-</div>
-<div class="layout">
-  <aside class="sidebar">
-    <div class="user"><div class="avatar">👨‍🍳</div><div style="font-weight:800">Krishna Shrestha</div><div class="muted" style="font-size:.8rem">I'm a Cashier 🍕</div></div>
-    <div class="nav" id="sideNav">
-      <button class="side active" data-tab="pos">Home</button><button class="side" data-tab="pos">Order</button>
-      <button class="side" data-tab="dash">Menu</button><button class="side" data-tab="inventory">Wallet</button>
-      <button class="side" data-tab="reports">History</button><button class="side" data-tab="customers">Promos</button>
-      <button class="side" data-tab="sales">Bills</button><button class="side" data-tab="branches">Setting</button>
-    </div>
-    <div id="bizExtras" class="card" style="font-size:.85rem"></div>
-    <div class="card" style="text-align:center"><div style="font-size:42px">👨‍🍳</div><div class="muted">POS Cloud</div><a href="/swagger" target="_blank">Swagger</a> · <a href="/health">Health</a></div>
-    <div style="display:flex;gap:6px;background:var(--bg);border-radius:999px;padding:4px"><button id="btnDark" class="btn ghost" style="flex:1" onclick="setDark(true)">🌙 Dark</button><button id="btnLight" class="btn ghost active" style="flex:1" onclick="setDark(false)">☀️ Light</button></div>
-    <input id="posBranch" placeholder="BranchId (auto)" style="font-size:.75rem"/>
-  </aside>
-<main style="padding:14px;overflow:auto">
-  <div style="font-weight:800" id="catTitle">Choose Category <span style="color:var(--green)">40+ category</span></div>
-  <div class="chips" id="catChips" style="display:flex;gap:8px;overflow:auto;padding:6px 0">
-    <button class="chip active" data-cat="all">🍽 All Items</button><button class="chip" data-cat="pizza">🍕 Pizza</button><button class="chip" data-cat="burger">🍔 Burger</button><button class="chip" data-cat="coffee">☕ Coffee</button><button class="chip" data-cat="momo">🥟 MOMO</button>
-  </div>
-  <div id="bizBanner" class="card" style="display:none"></div>
-  <style>
-    .chips .chip{white-space:nowrap;padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);cursor:pointer}
-    .chips .chip.active{background:var(--green);color:#fff;border-color:var(--green)}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
-    @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-    .pcard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:10px;text-align:center}
-    .pcard img{width:100%;height:110px;object-fit:cover;border-radius:12px;background:#eee}
-    .pcard .size{font-size:.8rem;color:var(--muted);margin-top:6px}
-    .pcard .add{margin-top:6px;width:100%}
-    .pcard .add.added{background:#DCFCE7;color:#166534;border-color:var(--green)}
-    .hidden{display:none!important}
-    .bill{position:sticky;top:56px;height:calc(100vh - 56px);overflow:auto;background:var(--card);border-left:1px solid var(--border);padding:12px}
-    .bitem{display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:14px;background:var(--bg);margin-bottom:8px}
-    .bitem img{width:40px;height:40px;border-radius:50%;object-fit:cover}
-    .qty{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 6px}
-    .qty button{width:24px;height:24px;border-radius:50%;border:none;background:var(--yellow);cursor:pointer}
-    .totals{border-top:2px dashed var(--border);margin-top:10px;padding-top:10px}
-    .paygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-    .pay{border:1px solid var(--border);background:var(--bg);border-radius:14px;padding:10px;text-align:center;cursor:pointer}
-    .pay.active{outline:2px solid var(--green)}
-    .place{width:100%;margin-top:10px}
-    .muted{color:var(--muted)} table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--border);padding:8px;text-align:left}
-    input,select{padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--text)}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px}
-    .row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  </style>
-  <div id="posSection"><div class="grid" id="productGrid"></div></div>
-  <section id="dash" class="hidden"><div class="row"><div class="card"><div class="muted">صافي المبيعات</div><div id="netSales" style="font-weight:800;font-size:1.3rem">—</div></div><div class="card"><div class="muted">المبيعات</div><div id="salesCount" style="font-weight:800;font-size:1.3rem">—</div></div><div class="card"><div class="muted">المخزون</div><div id="stockInfo" style="font-weight:800;font-size:1.3rem">—</div></div></div><div class="card"><button class="btn ghost" onclick="loadDash()">تحديث</button></div></section>
-<section id="products" style="display:none"><div class="card"><h3>المنتجات</h3><div style="display:flex;gap:8px"><button class="btn" onclick="loadProducts()">تحميل</button><button class="btn" style="background:#10B981;border-color:#10B981" onclick="seedDemo()">➕ تجريبية</button></div><table style="margin-top:10px"><thead><tr><th>SKU</th><th>الاسم</th><th>السعر</th><th>باركود</th></tr></thead><tbody id="productsBody"></tbody></table><div class="card" style="margin-top:12px"><h4>إضافة منتج</h4><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="pNameAr" placeholder="الاسم"/><input id="pSku" placeholder="SKU"/><input id="pPrice" type="number" step="0.01" placeholder="السعر"/><input id="pBarcode" placeholder="باركود"/><input id="pStock" type="number" placeholder="الكمية"/></div><button class="btn" style="margin-top:8px" onclick="createProduct()">حفظ</button><pre id="pOut" class="muted"></pre></div></div></section>
-<section id="sales" style="display:none"><div class="card"><h3>المبيعات</h3><button class="btn" onclick="loadSales()">تحميل</button><table style="margin-top:10px"><thead><tr><th>الإيصال</th><th>الإجمالي</th><th>التاريخ</th></tr></thead><tbody id="salesBody"></tbody></table></div></section>
-<section id="branches" style="display:none"><div class="card"><h3>الفروع</h3><button class="btn" onclick="loadBranches()">تحميل</button><table style="margin-top:10px"><thead><tr><th>الكود</th><th>الاسم</th><th>المعرف</th></tr></thead><tbody id="branchesBody"></tbody></table></div></section>
-<section id="inventory" style="display:none"><div class="card"><h3>المخزون — جرد + تحويل</h3><button class="btn" onclick="loadInventory()">تحميل المخزون</button><table style="margin-top:10px"><thead><tr><th>المنتج</th><th>الكمية</th><th>الحالة</th></tr></thead><tbody id="invBody"></tbody></table>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px"><input id="invProduct" placeholder="ProductId"/><input id="invQty" type="number" placeholder="الكمية"/><input id="invBranch" placeholder="BranchId"/></div><button class="btn" onclick="adjustInv()">تعديل/إضافة رصيد</button>
-<div style="margin-top:12px"><h4>تحويل بين فروع</h4><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><input id="trFrom" placeholder="من Branch"/><input id="trTo" placeholder="إلى Branch"/><input id="trProd" placeholder="ProductId"/><input id="trQty" type="number" placeholder="الكمية"/></div><button class="btn" onclick="transferInv()">تحويل</button></div></div></section>
-<section id="customers" style="display:none"><div class="card"><h3>العملاء + آجل</h3><button class="btn" onclick="loadCustomers()">تحميل</button><table style="margin-top:10px"><thead><tr><th>الاسم</th><th>الهاتف</th><th>الرصيد</th><th>الحد</th></tr></thead><tbody id="custBody"></tbody></table>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px"><input id="cName" placeholder="الاسم"/><input id="cPhone" placeholder="الهاتف"/><input id="cLimit" type="number" placeholder="الحد الائتماني"/></div><button class="btn" onclick="createCustomer()">إضافة عميل</button>
-<div style="margin-top:12px"><h4>سداد آجل</h4><input id="payCustId" placeholder="CustomerId"/><input id="payAmt" type="number" placeholder="المبلغ"/><button class="btn" onclick="payCustomer()">سداد</button></div></div></section>
-<section id="purchasing" style="display:none"><div class="card"><h3>المشتريات — استلام يزيد المخزون</h3><button class="btn" onclick="loadPurchases()">تحميل</button><table style="margin-top:10px"><thead><tr><th>المورد</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody id="purBody"></tbody></table>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px"><input id="purSup" placeholder="SupplierId (أو اتركه فارغ للتجريبي)"/><input id="purProd" placeholder="ProductId"/><input id="purQty" type="number" placeholder="الكمية"/><input id="purCost" type="number" step="0.01" placeholder="التكلفة"/></div><button class="btn" onclick="createPurchase()">إنشاء مشتريات</button></div></section>
-<section id="reports" class="hidden"><div class="card"><h3>التقارير</h3><button class="btn" onclick="loadReports()">تحديث</button><div id="reportsOut" class="muted" style="margin-top:10px"></div></div></section>
-</main>
-<aside class="bill">
-  <div style="display:flex;justify-content:space-between"><b>New Order Bill</b><span class="muted" id="billDate" style="font-size:.8rem"></span></div>
-  <div class="muted" style="font-size:.75rem">Branch: <span id="billBranch">—</span></div>
-  <div id="billItems" style="margin-top:8px"></div>
-  <!-- hidden compat table for old pos.js cartBody -->
-  <table style="display:none"><tbody id="cartBody"></tbody></table>
-  <div class="totals">
-    <div style="display:flex;justify-content:space-between"><span>Sub Total</span><span id="billSub">Rs.0.00</span></div>
-    <div style="display:flex;justify-content:space-between"><span>Tax 10% (VAT Included)</span><span id="billTax">Rs.0.00</span></div>
-    <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
-    <div style="display:flex;justify-content:space-between;color:var(--red);font-weight:800"><span>Total</span><span id="billTotal">Rs.0.00</span></div>
-  </div>
-  <div style="margin-top:10px;font-weight:700">Payment Method</div>
-  <div class="paygrid">
-    <div class="pay active" data-pay="cash" onclick="selectPay('cash')">💵<div>Cash</div></div>
-    <div class="pay" data-pay="card" onclick="selectPay('card')">💳<div>Debit Card</div></div>
-    <div class="pay" data-pay="ewallet" onclick="selectPay('ewallet')">👛<div>E-Wallet</div></div>
-  </div>
-  <button class="btn place" onclick="checkout()">Place Order</button>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-    <input id="discountTotal" type="number" value="0" step="0.01" placeholder="Discount" oninput="renderCart()"/>
-    <input id="payAmount" type="number" step="0.01" placeholder="Paid"/>
-  </div>
-  <div style="display:none">
-    <span id="cartSubtotal">0.00</span><span id="cartTax">0.00</span><span id="cartTotal">0.00</span>
-    <select id="payMethod"><option value="cash">cash</option><option value="card">card</option><option value="ewallet">ewallet</option></select>
-  </div>
-  <pre id="posOut" class="muted" style="white-space:pre-wrap"></pre>
-  <div id="receipt" style="display:none;background:var(--bg);border:1px dashed var(--border);padding:10px;white-space:pre-wrap;font-family:monospace"></div>
-  <input id="scanInput" style="position:absolute;left:-9999px" onkeydown="if(event.key==='Enter') scanAdd()"/>
-</aside>
-</div>
-<script>
-const BIZ={
-  restaurant:{brand:'<span>Rest</span>aurant',chips:'<button class="chip active">🍽 All Items</button><button class="chip">🍕 Pizza</button><button class="chip">🍔 Burger</button><button class="chip">☕ Coffee</button><button class="chip">🥟 MOMO</button>',extras:'🍽 Tables • Kitchen • Modifiers<br><small class=muted>Tables + KDS (coming)</small>',banner:''},
-  supermarket:{brand:'<span>Super</span>market',chips:'<button class="chip active">🛒 All</button><button class="chip">🥦 Produce</button><button class="chip">🥛 Dairy</button><button class="chip">📦 Grocery</button><button class="chip">🧴 Household</button>',extras:'🛒 Scale • Promotions<br><small class=muted>Barcode + fast checkout</small>',banner:'<b>Supermarket mode:</b> Scan scale barcode + promotions auto-applied'},
-  pharmacy:{brand:'<span>Phar</span>macy',chips:'<button class="chip active">💊 All</button><button class="chip">💊 Medicine</button><button class="chip">🧴 Care</button><button class="chip">🩹 First Aid</button>',extras:'💊 Batches • Expiry • Prescriptions<br><small class=muted>Expiry enforced on sale</small>',banner:'<b>Pharmacy:</b> Expiry check before sale — expired items blocked'},
-  bakery:{brand:'<span>Bak</span>ery',chips:'<button class="chip active">🥖 All</button><button class="chip">🍞 Bread</button><button class="chip">🥐 Pastry</button><button class="chip">🍰 Cake</button>',extras:'🥖 Recipes • Batches • Cost<br><small class=muted>Produce from ingredients</small>',banner:'<b>Bakery:</b> Bake batches from recipes — cost calculated'},
-  retail:{brand:'<span>Re</span>tail',chips:'<button class="chip active">🏪 All</button><button class="chip">👕 Apparel</button><button class="chip">📱 Electronics</button><button class="chip">🏠 Home</button>',extras:'🏪 General retail<br><small class=muted>Simple — no extra module</small>',banner:''}
-};
-function switchBusiness(v){
-  try{ localStorage.setItem('biz',v); }catch(e){}
-  const b=BIZ[v]||BIZ.restaurant;
-  const bt=document.getElementById('brandTitle'); if(bt) bt.innerHTML=b.brand;
-  const cc=document.getElementById('catChips'); if(cc) cc.innerHTML=b.chips;
-  const be=document.getElementById('bizExtras'); if(be) be.innerHTML=b.extras;
-  const bn=document.getElementById('bizBanner'); if(bn){ bn.innerHTML=b.banner; bn.style.display=b.banner?'block':'none'; }
-  const ot=document.getElementById('orderTitle'); if(ot) ot.textContent=v==='pharmacy'?'Prescription #123': v==='supermarket'?'Order #123 — Supermarket': v==='bakery'?'Order #123 — Bakery': v==='retail'?'Sale #123':'Order #123';
-  document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}));
-}
-document.getElementById('billDate').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-function setDark(v){document.body.classList.toggle('dark',v);const a=document.getElementById('btnDark'),b=document.getElementById('btnLight'); if(a) a.classList.toggle('active',v); if(b) b.classList.toggle('active',!v); try{localStorage.setItem('posDark',v?'1':'0')}catch(e){}}
-setDark((()=>{try{return localStorage.getItem('posDark')==='1'}catch(e){return false}})());
-const _initialBiz=(()=>{try{return localStorage.getItem('biz')||'restaurant'}catch(e){return 'restaurant'}})();
-switchBusiness(_initialBiz);
-const _bt=document.getElementById('businessType'); if(_bt) _bt.value=_initialBiz;
-// fallback: inline onchange may not fire in some browsers — wire here too
-if(_bt){ _bt.addEventListener('change', function(){ switchBusiness(this.value); }); }
-document.querySelectorAll('.side').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('.side').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-  const t=b.dataset.tab;
-  const show=id=>{document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));const e=document.getElementById(id);if(e) e.classList.remove('hidden')};
-  if(t==='pos'){ document.getElementById('posSection').classList.remove('hidden'); document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden')); }
-  else { document.getElementById('posSection').classList.add('hidden'); show(t); }
-});
-function selectPay(m){document.querySelectorAll('.pay').forEach(p=>p.classList.toggle('active',p.dataset.pay===m));let h=document.getElementById('payMethod');if(!h){h=document.createElement('select');h.id='payMethod';h.style.display='none';h.innerHTML='<option value=cash>cash</option><option value=card>card</option><option value=ewallet>ewallet</option>';document.body.appendChild(h);}h.value=m;}
-function doSearch(){const v=document.getElementById('searchInput').value;document.getElementById('scanInput').value=v;scanAdd();}
-</script>
-<script src="/pos.js"></script><script src="/pos2.js"></script><script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="pos_cloud">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>pos_cloud</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

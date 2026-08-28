@@ -14,9 +14,24 @@ class SyncItem {
 class SyncQueue {
   final List<SyncItem> _queue = [];
   List<SyncItem> get pending => _queue.where((e) => e.state == SyncState.pending).toList();
-  void enqueue(SyncItem item) => _queue.add(item);
+  List<SyncItem> get failed => _queue.where((e) => e.state == SyncState.failed).toList();
+  List<SyncItem> get all => List.unmodifiable(_queue);
+  int get pendingCount => pending.length;
+  void enqueue(SyncItem item) {
+    if (_queue.any((e) => e.clientId == item.clientId)) return;
+    _queue.add(item);
+  }
   void markSynced(String clientId) {
     final i = _queue.indexWhere((e) => e.clientId == clientId);
     if (i != -1) _queue[i].state = SyncState.synced;
   }
+  void markFailed(String clientId, String err) {
+    final i = _queue.indexWhere((e) => e.clientId == clientId);
+    if (i != -1) { _queue[i].state = SyncState.failed; _queue[i].lastError = err; _queue[i].attempts++; }
+  }
+  void retry(String clientId) {
+    final i = _queue.indexWhere((e) => e.clientId == clientId);
+    if (i != -1) _queue[i].state = SyncState.pending;
+  }
+  void clearSynced() => _queue.removeWhere((e) => e.state == SyncState.synced);
 }

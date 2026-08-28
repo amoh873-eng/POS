@@ -24,7 +24,19 @@ public class InventoryController(AppDbContext db) : ControllerBase
         var query = db.InventoryStocks.Where(s => s.TenantId == tenantId);
         if (branchId != null) query = query.Where(s => s.BranchId == branchId);
         var items = await query.ToListAsync();
-        return Ok(new { data = items });
+        // enrich with product/branch names for user-friendly display
+        var prods = await db.Products.Where(p => p.TenantId == tenantId).ToDictionaryAsync(p => p.Id);
+        var branches = await db.Branches.Where(b => b.TenantId == tenantId).ToDictionaryAsync(b => b.Id);
+        var data = items.Select(s => new
+        {
+            id = s.Id, s.TenantId, s.BranchId, s.ProductId, s.QtyOnHand, s.LowStockThreshold,
+            productName = prods.TryGetValue(s.ProductId, out var p) ? (p.NameAr ?? p.NameEn ?? p.Sku ?? p.Id.ToString()) : s.ProductId.ToString(),
+            productSku = prods.TryGetValue(s.ProductId, out var p2) ? p2.Sku : null,
+            imageUrl = prods.TryGetValue(s.ProductId, out var p3) ? p3.ImageUrl : null,
+            branchName = branches.TryGetValue(s.BranchId, out var b) ? b.Name : null,
+            status = s.QtyOnHand <= 0 ? "out" : (s.QtyOnHand <= s.LowStockThreshold ? "low" : "ok")
+        }).ToList();
+        return Ok(new { data });
     }
 
     [HttpGet("movements")]
@@ -36,7 +48,13 @@ public class InventoryController(AppDbContext db) : ControllerBase
         if (productId != null) q = q.Where(m => m.ProductId == productId);
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(m => m.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-        return Ok(new { data = items, meta = new { page, page_size = pageSize, total } });
+        var prods = await db.Products.Where(p => p.TenantId == tenantId).ToDictionaryAsync(p => p.Id);
+        var data = items.Select(m => new
+        {
+            m.Id, m.TenantId, m.BranchId, m.ProductId, m.Type, m.QtyDelta, m.RefType, m.RefId, m.CreatedAt,
+            productName = prods.TryGetValue(m.ProductId, out var p) ? (p.NameAr ?? p.NameEn ?? p.Sku ?? m.ProductId.ToString()) : m.ProductId.ToString()
+        }).ToList();
+        return Ok(new { data, meta = new { page, page_size = pageSize, total } });
     }
     [HttpGet("low-stock")]
     public async Task<IActionResult> LowStock([FromQuery] Guid tenantId, [FromQuery] Guid? branchId)
@@ -45,7 +63,16 @@ public class InventoryController(AppDbContext db) : ControllerBase
         var q = db.InventoryStocks.Where(s => s.TenantId == tenantId && s.QtyOnHand <= s.LowStockThreshold);
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
         var items = await q.ToListAsync();
-        return Ok(new { data = items });
+        var prods = await db.Products.Where(p => p.TenantId == tenantId).ToDictionaryAsync(p => p.Id);
+        var branches = await db.Branches.Where(b => b.TenantId == tenantId).ToDictionaryAsync(b => b.Id);
+        var data = items.Select(s => new
+        {
+            s.TenantId, s.BranchId, s.ProductId, s.QtyOnHand, s.LowStockThreshold,
+            productName = prods.TryGetValue(s.ProductId, out var p) ? (p.NameAr ?? p.NameEn ?? p.Sku ?? s.ProductId.ToString()) : s.ProductId.ToString(),
+            imageUrl = prods.TryGetValue(s.ProductId, out var p2) ? p2.ImageUrl : null,
+            branchName = branches.TryGetValue(s.BranchId, out var b) ? b.Name : null
+        }).ToList();
+        return Ok(new { data });
     }
     public record AdjustReq(Guid BranchId, Guid ProductId, decimal QtyDelta, string? Type);
     [HttpPost("adjust")]
