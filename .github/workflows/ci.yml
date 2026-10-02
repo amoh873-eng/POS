@@ -1,5 +1,10 @@
 name: ci
 on: [push, pull_request]
+
+# PHASE 32B — least-privilege token scope (read-only contents)
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -26,7 +31,15 @@ jobs:
         run: |
           dotnet tool install --global dotnet-ef --version 10.0.11
           cd backend/src/PosCloud.Infrastructure
-          dotnet ef migrations has-pending-model-changes --no-build -c AppDbContext
+          dotnet ef migrations has-pending-model-changes -c AppDbContext
+      - name: Security scan (fail on committed secret-like content)
+        run: |
+          set -euo pipefail
+          if grep -rInE 'ghp_[A-Za-z0-9]{20,}|xox[baprs]-|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}' --exclude-dir=.git --exclude-dir=bin --exclude-dir=obj --exclude-dir=build .; then
+            echo "::error::Secret-like content found in tracked files"; exit 1
+          fi
+          echo "Security scan OK"
+
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -34,3 +47,21 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - run: cd frontend && flutter pub get && flutter analyze && flutter test --dart-define=API_BASE_URL=https://api.example.test
+      - name: Flutter web release build
+        run: cd frontend && flutter build web --release
+
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      POS_POSTGRES_PASSWORD: ci-placeholder-password
+      POS_JWT_KEY: ci-placeholder-jwt-key-with-32-characters-min
+      POS_ALLOWED_HOSTS: localhost
+      POS_WEB_ORIGIN: http://localhost:8104
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose config validation
+        run: docker compose config --quiet
+      - name: Build POS API image (isolated stack)
+        run: docker build -t pos-cloud-api:ci ./backend
+      - name: Build POS Web image (isolated stack)
+        run: docker build -t pos-cloud-web:ci ./frontend
