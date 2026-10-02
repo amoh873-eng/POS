@@ -3,7 +3,9 @@
 # PHASE 32: separate web container; API traffic is reverse-proxied by nginx to pos-api.
 # Context: ./frontend
 
-FROM ghcr.io/cirruslabs/flutter:3.47.1-stable AS build
+# Pinned to the newest published stable image tag on ghcr (3.44.0 as of PHASE 32B);
+# matches the 'stable' channel used by the GitHub Actions frontend job.
+FROM ghcr.io/cirruslabs/flutter:3.44.0 AS build
 WORKDIR /app
 
 # Restore first for layer caching
