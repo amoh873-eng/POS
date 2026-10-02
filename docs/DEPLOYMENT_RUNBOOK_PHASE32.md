@@ -2,6 +2,9 @@
 
 > Isolated POS Cloud stack on the existing OVH VPS. **Never touches ERP / ERP-Commercial / Owner.**
 > Production secrets stay in `.env` (0600) — never in Git, images, or logs.
+>
+> **PHASE 32B note:** deploy **`e13e432`** (= tag `pos-phase32-deploy-candidate`)
+> — CI run `37047695245` GREEN (backend/frontend/docker). Verify `git rev-parse HEAD == e13e432...` before proceeding.
 
 ## 0. Deploy directory (VPS)
 
