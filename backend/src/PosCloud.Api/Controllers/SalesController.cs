@@ -10,7 +10,7 @@ namespace PosCloud.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/sales")]
-public class SalesController(AppDbContext db) : ControllerBase
+public class SalesController(AppDbContext db, PosCloud.Infrastructure.Integrations.JoInvoice.IJoInvoiceService joInvoiceService, PosCloud.Application.Accounting.IAccountingService accountingService) : ControllerBase
 {
     private Guid ResolveTid(Guid tid)
     {
@@ -20,7 +20,7 @@ public class SalesController(AppDbContext db) : ControllerBase
     }
     public record SaleLineReq(Guid ProductId, decimal Qty, decimal? UnitPrice, decimal? Discount);
     public record PaymentReq(string Method, decimal Amount, string? Provider, string? ProviderRef);
-    public record CreateSaleReq(Guid BranchId, Guid TenantId, Guid? CustomerId, decimal? DiscountTotal, List<SaleLineReq> Lines, List<PaymentReq> Payments);
+    public record CreateSaleReq(Guid BranchId, Guid TenantId, Guid? CustomerId, string? CustomerName, string? CustomerTaxId, decimal? DiscountTotal, List<SaleLineReq> Lines, List<PaymentReq> Payments);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSaleReq req, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey)
@@ -42,10 +42,26 @@ public class SalesController(AppDbContext db) : ControllerBase
 
         var (subtotal, taxTotal, grandTotal) = SaleCalculator.Compute(lines, req.DiscountTotal ?? 0);
         var paid = req.Payments.Sum(p => p.Amount);
-        // credit sale: allow unpaid if customer exists and within limit
-        if (req.CustomerId != null)
+
+        var customerId = req.CustomerId;
+        // If customer doesn't exist but tax id is provided, find or create (simplified)
+        if (customerId == null && !string.IsNullOrEmpty(req.CustomerTaxId))
         {
-            var cust = await db.Customers.FindAsync(req.CustomerId.Value);
+            var existingCust = await db.Customers.FirstOrDefaultAsync(c => c.TenantId == req.TenantId && c.TaxId == req.CustomerTaxId);
+            if (existingCust == null)
+            {
+                var newCust = new Customer { TenantId = req.TenantId, Name = req.CustomerName ?? "عميل جديد", TaxId = req.CustomerTaxId };
+                db.Customers.Add(newCust);
+                await db.SaveChangesAsync();
+                customerId = newCust.Id;
+            }
+            else customerId = existingCust.Id;
+        }
+
+        // credit sale: allow unpaid if customer exists and within limit
+        if (customerId != null)
+        {
+            var cust = await db.Customers.FindAsync(customerId.Value);
             if (cust != null)
             {
                 var owed = grandTotal - paid;
@@ -64,7 +80,7 @@ public class SalesController(AppDbContext db) : ControllerBase
         {
             TenantId = req.TenantId,
             BranchId = req.BranchId,
-            CustomerId = req.CustomerId,
+            CustomerId = customerId,
             ReceiptNo = $"R-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(1000, 9999)}",
             Subtotal = subtotal,
             TaxTotal = taxTotal,
@@ -90,51 +106,78 @@ public class SalesController(AppDbContext db) : ControllerBase
         foreach (var p in req.Payments)
             sale.Payments.Add(new Payment { TenantId = req.TenantId, SaleId = sale.Id, Method = p.Method, Amount = p.Amount, Provider = p.Provider, ProviderRef = p.ProviderRef });
 
-        // Transactional — compatible with Npgsql RetryingExecutionStrategy (EnableRetryOnFailure)
-        var strategy = db.Database.CreateExecutionStrategy();
         Sale? committedSale = null;
-        Guid? insufficientPid = null;
-        await strategy.ExecuteAsync(async () =>
+        // Transactional — In-Memory store doesn't support transactions
+        if (db.Database.IsInMemory())
         {
-            await using var tx = await db.Database.BeginTransactionAsync();
-            var ok = true;
             foreach (var item in sale.Items)
             {
                 var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == req.TenantId && s.BranchId == req.BranchId && s.ProductId == item.ProductId);
-                if (stock == null || stock.QtyOnHand < item.Qty)
-                {
-                    insufficientPid = item.ProductId;
-                    ok = false;
-                    break;
-                }
+                if (stock == null || stock.QtyOnHand < item.Qty) return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Product {item.ProductId} insufficient" } });
                 stock.QtyOnHand -= item.Qty;
-                db.InventoryMovements.Add(new InventoryMovement
-                {
-                    TenantId = req.TenantId, BranchId = req.BranchId, ProductId = item.ProductId, Type = "sale", QtyDelta = -item.Qty, RefType = "sale", RefId = sale.Id
-                });
-            }
-            if (!ok)
-            {
-                await tx.RollbackAsync();
-                return;
+                db.InventoryMovements.Add(new InventoryMovement { TenantId = req.TenantId, BranchId = req.BranchId, ProductId = item.ProductId, Type = "sale", QtyDelta = -item.Qty, RefType = "sale", RefId = sale.Id });
             }
             db.Sales.Add(sale);
             await db.SaveChangesAsync();
-            await tx.CommitAsync();
             committedSale = sale;
-        });
-        if (insufficientPid != null)
-            return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Product {insufficientPid} insufficient" } });
+        }
+        else
+        {
+            var strategy = db.Database.CreateExecutionStrategy();
+            Guid? insufficientPid = null;
+            Sale? innerSale = null;
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = await db.Database.BeginTransactionAsync();
+                var ok = true;
+                foreach (var item in sale.Items)
+                {
+                    var stock = await db.InventoryStocks.FirstOrDefaultAsync(s => s.TenantId == req.TenantId && s.BranchId == req.BranchId && s.ProductId == item.ProductId);
+                    if (stock == null || stock.QtyOnHand < item.Qty) { insufficientPid = item.ProductId; ok = false; break; }
+                    stock.QtyOnHand -= item.Qty;
+                    db.InventoryMovements.Add(new InventoryMovement { TenantId = req.TenantId, BranchId = req.BranchId, ProductId = item.ProductId, Type = "sale", QtyDelta = -item.Qty, RefType = "sale", RefId = sale.Id });
+                }
+                if (!ok) { await tx.RollbackAsync(); return; }
+                db.Sales.Add(sale);
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+                innerSale = sale;
+            });
+            if (insufficientPid != null)
+                return UnprocessableEntity(new { error = new { code = "INSUFFICIENT_STOCK", message = $"Product {insufficientPid} insufficient" } });
+            committedSale = innerSale;
+        }
+
+        if (committedSale == null) return BadRequest(new { error = new { message = "Sale commit failed" } });
+
+        // Auto-post to Accounting
+        try { await accountingService.AutoPostSaleAsync(committedSale); } catch { /* log and continue - don't block sale */ }
+
+        // Background Jo-Invoice submission
+        var settings = await db.TenantSettings.FindAsync(req.TenantId);
+        if (settings != null && settings.JoInvoiceEnabled)
+        {
+            var result = await joInvoiceService.SubmitSaleAsync(committedSale!, settings);
+            committedSale!.JoInvoiceStatus = result.Success ? "submitted" : "failed";
+            committedSale.JoInvoiceUuid = result.Uuid;
+            committedSale.JoInvoiceQrCode = result.QrCode;
+            committedSale.JoInvoiceResponse = result.ResponseRaw;
+            await db.SaveChangesAsync();
+        }
+
         return Created($"/api/sales/{committedSale!.Id}", new { data = committedSale });
     }
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> List([FromQuery] Guid tenantId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         tenantId = ResolveTid(tenantId);
-        var q = db.Sales.Where(s => s.TenantId == tenantId).OrderByDescending(s => s.CreatedAt);
+        var q = db.Sales.Where(s => s.TenantId == tenantId);
+        if (from != null) q = q.Where(s => s.CreatedAt >= from.Value.ToUniversalTime());
+        if (to != null) q = q.Where(s => s.CreatedAt <= to.Value.ToUniversalTime());
+        q = q.OrderByDescending(s => s.CreatedAt);
         var total = await q.CountAsync();
-        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).Include(s => s.Items).ToListAsync();
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).Include(s => s.Items).Include(s => s.Customer).ToListAsync();
         return Ok(new { data = items, meta = new { page, page_size = pageSize, total } });
     }
 

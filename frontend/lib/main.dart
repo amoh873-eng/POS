@@ -11,6 +11,9 @@ import 'features/inventory/inventory_screen.dart';
 import 'features/reports/reports_screen.dart';
 import 'features/customers/customers_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/invoices/sales_invoices_screen.dart';
+import 'features/invoices/purchase_invoices_screen.dart';
+import 'features/accounting/chart_of_accounts_screen.dart';
 
 void main() => runApp(const PosApp());
 
@@ -64,10 +67,12 @@ class _PosAppState extends State<PosApp> {
       PosScreen(api: api, syncQueue: syncQueue),
       ProductsScreen(api: api),
       InventoryScreen(api: api),
+      SalesInvoicesScreen(api: api),
+      PurchaseInvoicesScreen(api: api),
+      ChartOfAccountsScreen(api: api),
       CustomersScreen(api: api),
       ReportsScreen(api: api),
       SettingsScreen(api: api, onLocaleChanged: (l) => setState(() => _locale = l)),
-      Builder(builder: (ctx) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.sync, size: 64, color: Theme.of(ctx).colorScheme.primary), const SizedBox(height: 12), Text('قيد الانتظار: ${syncQueue.pendingCount}  |  فشلت: ${syncQueue.failed.length}  |  تمت: ${syncQueue.all.where((e) => e.state == SyncState.synced).length}'), const SizedBox(height: 12), ElevatedButton(onPressed: () => showDialog(context: ctx, builder: (_) => syncDialog), child: const Text('عرض التفاصيل')), const SizedBox(height: 8), const Text('العمليات تتم مزامنتها عند عودة الشبكة', style: TextStyle(color: Colors.grey, fontSize: 12))]))),
     ];
     final syncBadge = syncQueue.pendingCount;
     return MaterialApp(
@@ -82,8 +87,17 @@ class _PosAppState extends State<PosApp> {
           title: Row(children: [
             Icon(_healthOk ? Icons.cloud_done : Icons.cloud_off, size: 14, color: _healthOk ? Colors.green : Colors.red),
             const SizedBox(width: 6),
-            Text(_healthOk ? 'متصل: ${AppConfig.baseUrl} — قيد الانتظار: $syncBadge' : 'غير متصل: $_healthMsg', style: TextStyle(fontSize: 11, color: _healthOk ? Colors.green.shade700 : Colors.red.shade700)),
+            Text(_healthOk ? 'متصل: ${AppConfig.baseUrl}' : 'غير متصل: $_healthMsg', style: TextStyle(fontSize: 11, color: _healthOk ? Colors.green.shade700 : Colors.red.shade700)),
             const Spacer(),
+            InkWell(
+              onTap: () => showDialog(context: context, builder: (_) => syncDialog),
+              child: Badge(
+                label: Text('$syncBadge'),
+                isLabelVisible: syncBadge > 0,
+                child: const Icon(Icons.sync, size: 18),
+              ),
+            ),
+            const SizedBox(width: 12),
             if (syncBadge > 0) InkWell(onTap: () async { final pending = syncQueue.pending; if (pending.isEmpty) return; for (final it in pending) { try { final body = Map<String, dynamic>.from(<String, dynamic>{}); body['payload'] = it.payloadJson; final r = await api.post('/api/sync/push', {'items': [{'clientId': it.clientId, 'type': it.type, 'payloadJson': it.payloadJson}]}); if (r['error'] == null) { syncQueue.markSynced(it.clientId); } } catch (e) { syncQueue.markFailed(it.clientId, e.toString()); } } setState(() {}); }, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(12)), child: Text('مزامنة ($syncBadge)', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
           ]),
         ),
@@ -91,15 +105,17 @@ class _PosAppState extends State<PosApp> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _idx,
           onDestinationSelected: (i) => setState(() => _idx = i),
-          destinations: [
-            const NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
-            const NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'POS'),
-            const NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Products'),
-            const NavigationDestination(icon: Icon(Icons.warehouse), label: 'Inventory'),
-            const NavigationDestination(icon: Icon(Icons.people), label: 'Customers'),
-            const NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Reports'),
-            const NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
-            NavigationDestination(icon: Badge(label: Text('$syncBadge'), isLabelVisible: syncBadge > 0, child: const Icon(Icons.sync)), label: 'Sync'),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.dashboard), label: 'الرئيسية'),
+            NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'نقطة بيع'),
+            NavigationDestination(icon: Icon(Icons.inventory_2), label: 'الأصناف'),
+            NavigationDestination(icon: Icon(Icons.warehouse), label: 'المخزون'),
+            NavigationDestination(icon: Icon(Icons.receipt_long), label: 'المبيعات'),
+            NavigationDestination(icon: Icon(Icons.shopping_cart), label: 'المشتريات'),
+            NavigationDestination(icon: Icon(Icons.account_tree), label: 'المحاسبة'),
+            NavigationDestination(icon: Icon(Icons.people), label: 'العملاء'),
+            NavigationDestination(icon: Icon(Icons.bar_chart), label: 'التقارير'),
+            NavigationDestination(icon: Icon(Icons.settings), label: 'الإعدادات'),
           ],
         ),
       ),

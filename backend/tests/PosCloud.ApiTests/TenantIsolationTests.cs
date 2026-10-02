@@ -77,14 +77,16 @@ public class TenantIsolationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Directly test ErrorHandlingMiddleware via factory in Production — expects generic message
         var prodFactory = _factory.WithWebHostBuilder(b => b.UseEnvironment("Production"));
-        // Without Jwt:Key and ConnectionStrings, Production should fail fast — verify fail-fast itself (P0-1 + P1-1)
+        // Without Jwt:Key / ConnectionStrings / AllowedHosts, Production should fail fast —
+        // verify fail-fast itself (P0-1 + P1-1 + PHASE 32 AllowedHosts host-hardening guard).
         // We do not actually call Produce; we just verify factory throws on build — documented as regression guard
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
             var c = prodFactory.CreateClient();
             await c.GetAsync("/health");
         });
-        // Either Jwt:Key missing or ConnectionStrings missing — both are correct P0/P1 fail-fast paths
-        (ex.Message.Contains("Jwt:Key") || ex.Message.Contains("ConnectionStrings")).Should().BeTrue();
+        // Jwt:Key missing, ConnectionStrings missing, or AllowedHosts wildcard — all are
+        // correct Production fail-fast paths and must keep throwing.
+        (ex.Message.Contains("Jwt:Key") || ex.Message.Contains("ConnectionStrings") || ex.Message.Contains("AllowedHosts")).Should().BeTrue();
     }
 }

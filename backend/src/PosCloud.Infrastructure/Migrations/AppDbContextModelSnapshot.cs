@@ -17,10 +17,60 @@ namespace PosCloud.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "10.0.0-preview.2.25163.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.Account", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsGroup")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("accounts", (string)null);
+                });
 
             modelBuilder.Entity("PosCloud.Domain.Entities.AuditLog", b =>
                 {
@@ -154,6 +204,9 @@ namespace PosCloud.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
                     b.Property<decimal>("Balance")
                         .HasColumnType("numeric");
 
@@ -173,7 +226,13 @@ namespace PosCloud.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("NationalId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaxId")
                         .HasColumnType("text");
 
                     b.Property<Guid>("TenantId")
@@ -254,6 +313,58 @@ namespace PosCloud.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("inventory_stocks", (string)null);
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.JournalEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenceType")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("journal_entries", (string)null);
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.JournalEntryLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Credit")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Debit")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("JournalEntryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JournalEntryId");
+
+                    b.ToTable("journal_entry_lines", (string)null);
                 });
 
             modelBuilder.Entity("PosCloud.Domain.Entities.Payment", b =>
@@ -432,6 +543,8 @@ namespace PosCloud.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SupplierId");
+
                     b.ToTable("purchases", (string)null);
                 });
 
@@ -538,6 +651,19 @@ namespace PosCloud.Infrastructure.Migrations
                     b.Property<string>("IdempotencyKey")
                         .HasColumnType("text");
 
+                    b.Property<string>("JoInvoiceQrCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("JoInvoiceResponse")
+                        .HasColumnType("text");
+
+                    b.Property<string>("JoInvoiceStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("JoInvoiceUuid")
+                        .HasColumnType("text");
+
                     b.Property<decimal>("PaidTotal")
                         .HasColumnType("numeric");
 
@@ -562,6 +688,11 @@ namespace PosCloud.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("JoInvoiceUuid")
+                        .IsUnique();
 
                     b.HasIndex("ReceiptNo")
                         .IsUnique();
@@ -760,6 +891,22 @@ namespace PosCloud.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("JoInvoiceActivityNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("JoInvoiceClientId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("JoInvoiceEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("JoInvoiceEnvironment")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("JoInvoiceSecretKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasColumnType("text");
@@ -869,11 +1016,38 @@ namespace PosCloud.Infrastructure.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("PosCloud.Domain.Entities.Account", b =>
+                {
+                    b.HasOne("PosCloud.Domain.Entities.Account", null)
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId");
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.JournalEntryLine", b =>
+                {
+                    b.HasOne("PosCloud.Domain.Entities.JournalEntry", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PosCloud.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("PosCloud.Domain.Entities.Sale", null)
                         .WithMany("Payments")
                         .HasForeignKey("SaleId");
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.Purchase", b =>
+                {
+                    b.HasOne("PosCloud.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("PosCloud.Domain.Entities.PurchaseItem", b =>
@@ -883,6 +1057,15 @@ namespace PosCloud.Infrastructure.Migrations
                         .HasForeignKey("PurchaseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.Sale", b =>
+                {
+                    b.HasOne("PosCloud.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId");
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("PosCloud.Domain.Entities.SaleItem", b =>
@@ -901,6 +1084,16 @@ namespace PosCloud.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.Account", b =>
+                {
+                    b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("PosCloud.Domain.Entities.JournalEntry", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("PosCloud.Domain.Entities.Purchase", b =>

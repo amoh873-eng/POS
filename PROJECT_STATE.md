@@ -8,14 +8,14 @@
 | Project | POS Cloud Platform |
 | Version | 1.1 |
 | Architecture | Approved Baseline |
-| Architecture Status | UNCHANGED |
-| Development Status | READY FOR PRODUCTION |
-| Last Updated | 2026-08-25 (Cell 018 — CI GREEN → PRODUCTION READY) |
-| Updated By | Cline -- GitHub Actions 32896369066 GREEN (backend+frontend SUCCESS) — PROMOTED READY FOR STAGING → READY FOR PRODUCTION |
-| Current Phase | PHASE-17 (Deployment) -- READY FOR PRODUCTION |
-| Current Cell | ALL CORE 001-012 hardened incl. Cell 018 (Products+Inventory 005/006) f903113 GREEN; Cell 019 UNDEFINED — do not invent |
-| Current Task | Cell 018 feat(products): f903113 COMPLETE + CI GREEN (run 32896369066 success: backend dotnet build/test+fail-fast PASS, frontend flutter pub get/analyze/test PASS) → PROJECT_STATE promoted READY FOR PRODUCTION (L0 doc-only, no code/arch change) → awaiting cloud-deploy / P2+P3 runbook per DEP-001 |
-| Blocked | Cell 019 UNDEFINED (L2 — no approved scope per 00/02/09); CI cleared GREEN — no longer blocked |
+| Architecture Status | UNCHANGED (Modular Monolith preserved — PHASE 32 did not alter architecture/stack) |
+| Development Status | STABILIZED — POS READY FOR DOCKER DEPLOYMENT (PHASE 32 passed: build 0 err, tests 26/26, analyze 0, flutter test PASS, live smoke PASS) |
+| Last Updated | 2026-10-02 (PHASE 32 — POS P0 stabilization + isolated Docker stack) |
+| Updated By | Cline -- PHASE 32 branch `phase-32-pos-p0-docker` |
+| Current Phase | PHASE-32 (POS P0 Stabilization + Docker Deployment) -- local stabilized; VPS deploy pending SSH |
+| Current Cell | PHASE 32 closed P0 #1 (POSplan.doc recovered), P0 #2 (Flutter platform separation), P0 #3 (EF migrations accounting+JoInvoice), P0 #4 (Production seed guard) + hardening (CORS/AllowedHosts/ForwardedHeaders/uploads/CI .NET 10/packages) |
+| Current Task | Stabilize → Dockerize → Deploy (deploy step requires VPS SSH: /home/dev/pos-cloud per docs/DEPLOYMENT_RUNBOOK_PHASE32.md) |
+| Blocked | VPS deployment step needs SSH credentials/access (standing task, not an architecture block) |
 
 ## Completed
 - [x] Project Vision
@@ -99,7 +99,7 @@ AWAITING STAGING VERIFICATION — Flutter SDK REQUIRED TOOL MISSING on this host
 - CP-2026-08-25-018: CELL-018 Products+Inventory -- tenant isolation FIX (Inventory Adjust/Movement/Transfer + Products Delete/Create), DesignTimeFactory env-only, migration 018 Products-only + 019 Balance, 4 tenant-isolation ApiTests -- git diff/check clean -- f903113 feat(products): complete products and inventory core -- pushed origin/master (HEAD==origin) -- backend CI PASS / frontend rate-limited manual check https://github.com/amoh873-eng/POS/actions/runs/32896369066
 - CP-2026-08-25-019: PHASE-17 CONTINUITY -- Cell 019 determined UNDEFINED per 00/02/09 docs (no approved scope, 001-012 already hardened) -- no code change; PROJECT_STATE.md synced to reflect continuity -- CI for Cell 018 then GREEN → cleared for promotion
 - CP-2026-08-25-020: PHASE-17 L0 PROMOTION -- GitHub Actions 32896369066 GREEN verified (status completed, conclusion success, backend+frontend success, head_sha f9031136a4eed46f6fb4f8796f12b03a13088472) -- PROJECT_STATE.md promoted READY FOR STAGING → READY FOR PRODUCTION (L0 doc-only, no controller/domain/migration/test/flutter/docker/CI/arch change) -- Cell 019 remains UNDEFINED
-
+- CP-2026-10-02-021: PHASE-32 POS P0 STABILIZATION -- branch `phase-32-pos-p0-docker` (safety snapshot `git stash create` 6a01322a) -- P0-1 POSplan.doc recovered from blob 6e9eaa (65,004 B, commit fc38f48) -- P0-2 Flutter platform separation (conditional imports: printer_settings_io_*/web_print_io_*; dart:html/dart:js confined to web-only files) -- flutter analyze 45→0, flutter test PASS, flutter build web PASS -- P0-3 EF migration `20261002170343_accounting_joinvoice_phase32` (accounts/journal_entries/journal_entry_lines + Sale/TenantSettings JoInvoice + Customer TaxId/NationalId/Address + FKs/indexes); model↔migrations in sync; `backend/migrations-pos-cloud.sql` generated -- P0-4 Production seed guard (SeedDemoData=false → no demo tenant/admin/products/sales/password-reset) -- JoInvoice disabled-by-default + credentials fail-safe (no fake keys) -- packages realigned (NU1603 cleared; SQLitePCLRaw pinned 2.1.11 — advisory fix beyond 2.1.x needs online feed, documented) -- ForwardedHeaders KnownIPNetworks, CORS single policy, AllowedHosts fail-fast, uploads unified to configurable root (Docker volume /app/uploads) + magic-byte validation -- CI → .NET 10 + migration sync gate -- Docker: backend Dockerfile (.NET 10, non-root app user, healthcheck) + frontend Dockerfile (Flutter web → nginx SPA+proxy) + isolated compose (`pos-cloud` namespace: pos-net/pos-db/pos-api/pos-web, volumes pos-pgdata/pos-uploads, ports 8103/8104) -- backend build 0 errors, tests 26/26, live smoke /health 200 /api 200 login 200 -- docs: DEPLOYMENT_RUNBOOK_PHASE32.md + DEPLOYMENT_STATUS.md -- VPS deploy pending SSH (required: /home/dev/pos-cloud) -- Architecture UNCHANGED
 
 ## How to Resume
 1. Read this file

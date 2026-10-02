@@ -8,7 +8,7 @@ namespace PosCloud.Api.Controllers;
 [ApiController]
 [Route("api/products")]
 [Authorize]
-public class ProductsController(AppDbContext db) : ControllerBase
+public class ProductsController(AppDbContext db, Microsoft.AspNetCore.Hosting.IWebHostEnvironment env, Microsoft.Extensions.Configuration.IConfiguration config, ILogger<ProductsController> logger) : ControllerBase
 {
     private Guid ResolveTenant(Guid? _ignored)
     {
@@ -57,6 +57,7 @@ public class ProductsController(AppDbContext db) : ControllerBase
         var claim = User.FindFirst("tid")?.Value;
         if (Guid.TryParse(claim, out var ct) && p.TenantId != ct) return NotFound(new { error = new { code = "NOT_FOUND", message = "Product not found" } });
         if (string.IsNullOrWhiteSpace(req.ImageBase64)) return BadRequest(new { error = new { code = "VALIDATION_ERROR", message = "ImageBase64 required" } });
+        logger.LogInformation("Uploading image for product {Id}. Base64 length: {Length}", id, req.ImageBase64.Length);
         var base64 = req.ImageBase64;
         if (base64.Contains(",")) base64 = base64.Split(",").Last();
         byte[] bytes;
@@ -64,13 +65,29 @@ public class ProductsController(AppDbContext db) : ControllerBase
         if (bytes.Length > 2 * 1024 * 1024) return BadRequest(new { error = new { code = "VALIDATION_ERROR", message = "Image too large (max 2MB)" } });
         var ext = Path.GetExtension(req.FileName ?? ".jpg").ToLowerInvariant();
         if (ext is not ".jpg" and not ".jpeg" and not ".png" and not ".webp" and not ".gif") ext = ".jpg";
-        var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products");
+
+        // PHASE 32 — content validation: sniff the magic bytes so the stored file
+        // always uses a canonical, safe extension matching its real content.
+        var sniffedExt =
+            (ext == ".png" && bytes.Length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) ? ".png"
+            : (ext == ".webp" && bytes.Length > 12 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46) ? ".webp"
+            : (ext == ".gif" && bytes.Length > 6 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) ? ".gif"
+            : (bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) ? ".jpg"
+            : ".jpg"; // conservative fallback for unrecognized bytes
+
+        // Unified uploads root (PHASE 32): config Uploads:Path overrides the
+        // webroot default; production mounts the Docker named volume at /app/uploads.
+        // The output path is derived only from the product id (never client input),
+        // so path-traversal is impossible.
+        var uploadsRoot = config["Uploads:Path"]
+            ?? Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
+        var dir = Path.Combine(uploadsRoot, "products");
         Directory.CreateDirectory(dir);
-        var fileName = $"{id}{ext}";
+        var fileName = $"{id}{sniffedExt}";
         var path = Path.Combine(dir, fileName);
         await System.IO.File.WriteAllBytesAsync(path, bytes);
-        // Also ensure container volume is writable after restart
-        p.ImageUrl = $"/uploads/products/{fileName}";
+        logger.LogInformation("Image saved to {Path}", path);
+        p.ImageUrl = $"uploads/products/{fileName}";
         p.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok(new { data = new { imageUrl = p.ImageUrl } });
@@ -115,6 +132,7 @@ public class ProductsController(AppDbContext db) : ControllerBase
         p.TaxRate = dto.TaxRate;
         p.Unit = string.IsNullOrWhiteSpace(dto.Unit) ? p.Unit : dto.Unit;
         if (dto.CategoryId != Guid.Empty) p.CategoryId = dto.CategoryId;
+        p.ImageUrl = dto.ImageUrl ?? p.ImageUrl;
         p.MinStockLevel = dto.MinStockLevel;
         p.IsActive = dto.IsActive;
         p.UpdatedAt = DateTime.UtcNow;

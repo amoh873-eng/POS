@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'dart:html' as html;
+import 'printer_settings_io.dart';
 
-/// Receipt printer configuration, persisted in localStorage on web.
+/// Receipt printer configuration.
+/// The model is platform-agnostic; persistence delegates to
+/// [PrinterSettingsIo], which is resolved by conditional import
+/// (web → localStorage via dart:html, anywhere else → in-memory).
 class PrinterSettings {
   String receiptPrinter = 'ESCPOS Receipt';
   String kitchenPrinter = 'KITCHEN-PRINTER';
@@ -11,8 +14,6 @@ class PrinterSettings {
   int customerCopies = 1;
   int fontSize = 12;
   bool boldHeader = true;
-
-  static const _key = 'pos_printer_settings';
 
   int get mm => paperSize.contains('58') ? 58 : 80;
 
@@ -47,7 +48,7 @@ class PrinterSettingsStore {
   static Future<PrinterSettings> load() async {
     if (kIsWeb) {
       try {
-        final raw = html.window.localStorage[PrinterSettings._key];
+        final raw = await PrinterSettingsIo.read();
         if (raw != null && raw.isNotEmpty) {
           return PrinterSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
         }
@@ -60,7 +61,7 @@ class PrinterSettingsStore {
     _mem = s;
     if (kIsWeb) {
       try {
-        html.window.localStorage[PrinterSettings._key] = jsonEncode(s.toJson());
+        await PrinterSettingsIo.write(jsonEncode(s.toJson()));
       } catch (_) {}
     }
   }

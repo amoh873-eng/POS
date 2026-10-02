@@ -110,7 +110,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               }
             } catch (e) { setD(() { localErr = e.toString(); uploadProgress = 0; }); return; }
           }
-          Navigator.pop(context, {'nameAr': ar.text.trim(), 'nameEn': en.text.trim(), 'sku': sku.text.trim(), 'barcodeMain': bc.text.trim().isEmpty ? null : bc.text.trim(), 'costPrice': double.tryParse(cost.text) ?? 0, 'sellPrice': double.tryParse(sell.text) ?? 0, 'unit': 'pcs', 'isActive': true, 'imageUrl': finalImage, 'description': desc.text.trim().isEmpty ? null : desc.text.trim(), 'minStockLevel': double.tryParse(minStock.text) ?? 5});
+          if (mounted) Navigator.pop(context, {'nameAr': ar.text.trim(), 'nameEn': en.text.trim(), 'sku': sku.text.trim(), 'barcodeMain': bc.text.trim().isEmpty ? null : bc.text.trim(), 'costPrice': double.tryParse(cost.text) ?? 0, 'sellPrice': double.tryParse(sell.text) ?? 0, 'unit': 'pcs', 'isActive': true, 'imageUrl': finalImage, 'description': desc.text.trim().isEmpty ? null : desc.text.trim(), 'minStockLevel': double.tryParse(minStock.text) ?? 5});
         }, child: const Text('حفظ'))],
       )),
     );

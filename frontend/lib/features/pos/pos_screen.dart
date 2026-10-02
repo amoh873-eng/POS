@@ -7,6 +7,7 @@ import '../../core/money_display.dart';
 import '../../core/sync_queue.dart';
 import '../../core/printer_settings.dart';
 import '../../core/web_print.dart' as webprint;
+import 'pos_ui_settings.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key, required this.api, required this.syncQueue});
@@ -22,11 +23,16 @@ class _PosScreenState extends State<PosScreen> {
   String? _tenantId;
   String? _branchId;
   final _barcodeCtrl = TextEditingController();
+  final _customerTaxIdCtrl = TextEditingController();
+  final _customerNameCtrl = TextEditingController();
   bool _paying = false;
   String? _msg;
+  PosUiSettings _ui = PosUiSettings();
+
   @override
   void initState() { super.initState(); _bootstrap(); }
   Future<void> _bootstrap() async {
+    _ui = await PosUiSettings.load();
     try {
       final tenants = await widget.api.get('/api/tenants/me');
       final meData = tenants['data'];
@@ -60,11 +66,20 @@ class _PosScreenState extends State<PosScreen> {
       if (idx >= 0) {
         _cart[idx]['qty'] = (_cart[idx]['qty'] as num) + 1;
       } else {
-        _cart.add({'id': p['id'], 'name': p['nameAr'] ?? p['name_ar'] ?? p['nameEn'] ?? 'P', 'price': (p['sellPrice'] ?? p['sell_price'] ?? 0).toDouble(), 'qty': 1});
+        _cart.add({
+          'id': p['id'], 
+          'name': p['nameAr'] ?? p['name_ar'] ?? p['nameEn'] ?? 'P', 
+          'price': (p['sellPrice'] ?? p['sell_price'] ?? 0).toDouble(), 
+          'qty': 1,
+          'taxRate': (p['taxRate'] ?? p['tax_rate'] ?? 0.0).toDouble(),
+        });
       }
     });
   }
-  double get _total => _cart.fold(0.0, (s, e) => s + (e['price'] as double) * (e['qty'] as num));
+  double get _subtotal => _cart.fold(0.0, (s, e) => s + (e['price'] as double) * (e['qty'] as num));
+  double get _taxTotal => _cart.fold(0.0, (s, e) => s + ((e['price'] as double) * (e['qty'] as num)) * (e['taxRate'] ?? 0.0));
+  double get _total => _subtotal + _taxTotal;
+
   Future<void> _pay() async {
     if (_cart.isEmpty || _tenantId == null || _branchId == null) {
       setState(() => _msg = 'السلة فارغة او الفرع غير محدد');
@@ -74,7 +89,14 @@ class _PosScreenState extends State<PosScreen> {
     final soldItems = List<Map<String, dynamic>>.from(_cart);
     setState(() { _paying = true; _msg = null; });
     final idem = 'idem-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
-    final body = {'tenantId': _tenantId, 'branchId': _branchId, 'lines': _cart.map((e) => {'productId': e['id'], 'qty': e['qty']}).toList(), 'payments': [{'method': 'cash', 'amount': _total}]};
+    final body = {
+      'tenantId': _tenantId, 
+      'branchId': _branchId, 
+      'lines': _cart.map((e) => {'productId': e['id'], 'qty': e['qty']}).toList(), 
+      'payments': [{'method': 'cash', 'amount': _total}],
+      'customerName': _customerNameCtrl.text.isNotEmpty ? _customerNameCtrl.text : null,
+      'customerTaxId': _customerTaxIdCtrl.text.isNotEmpty ? _customerTaxIdCtrl.text : null,
+    };
     try {
       final res = await widget.api.post('/api/sales', body, extraHeaders: {'Idempotency-Key': idem});
       if (res['data'] != null) {
@@ -103,7 +125,14 @@ class _PosScreenState extends State<PosScreen> {
     final soldItems = List<Map<String, dynamic>>.from(_cart);
     setState(() { _paying = true; _msg = null; });
     final idem = 'idem-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
-    final body = {'tenantId': _tenantId, 'branchId': _branchId, 'lines': _cart.map((e) => {'productId': e['id'], 'qty': e['qty']}).toList(), 'payments': [{'method': method, 'amount': _total}]};
+    final body = {
+      'tenantId': _tenantId, 
+      'branchId': _branchId, 
+      'lines': _cart.map((e) => {'productId': e['id'], 'qty': e['qty']}).toList(), 
+      'payments': [{'method': method, 'amount': _total}],
+      'customerName': _customerNameCtrl.text.isNotEmpty ? _customerNameCtrl.text : null,
+      'customerTaxId': _customerTaxIdCtrl.text.isNotEmpty ? _customerTaxIdCtrl.text : null,
+    };
     try {
       final res = await widget.api.post('/api/sales', body, extraHeaders: {'Idempotency-Key': idem});
       if (res['data'] != null) { final receipt = res['data']; if (mounted) { setState(() { _msg = 'تم البيع ب$method - ${receipt['receiptNo'] ?? receipt['receipt_no'] ?? ''}'; _cart.clear(); }); _showReceipt(receipt, method, soldItems); } }
@@ -117,6 +146,8 @@ class _PosScreenState extends State<PosScreen> {
     final items = (sale['items'] ?? []) as List;
     final names = soldItems.map((e) => e['name'].toString()).toList();
     final receiptNo = sale['receiptNo'] ?? sale['receipt_no'] ?? '';
+    final joUuid = sale['joInvoiceUuid'] ?? sale['jo_invoice_uuid'];
+    final joQr = sale['joInvoiceQrCode'] ?? sale['jo_invoice_qr_code'];
     final grand = sale['grandTotal'] ?? sale['grand_total'] ?? 0;
     final total = sale['total'] ?? grand;
     // Build line rows combining sale item qty/price with captured product name
@@ -126,7 +157,7 @@ class _PosScreenState extends State<PosScreen> {
       final qty = it['qty'] ?? 1;
       final price = it['unitPrice'] ?? it['unit_price'] ?? 0;
       final line = double.tryParse('${it['lineTotal'] ?? it['line_total'] ?? 0}') ?? 0;
-      return Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(nm, style: const TextStyle(fontSize: 11))), Text('${qty} x $price', style: const TextStyle(fontSize: 11)), Text('$line', style: const TextStyle(fontSize: 11))]));
+      return Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(nm, style: const TextStyle(fontSize: 11))), Text('$qty x $price', style: const TextStyle(fontSize: 11)), Text('$line', style: const TextStyle(fontSize: 11))]));
     }).toList();
     showDialog(context: context, builder: (ctx) => AlertDialog(
       title: const Row(children: [Icon(Icons.receipt_long, color: Colors.green), SizedBox(width: 8), Text('فاتورة', style: TextStyle(fontWeight: FontWeight.bold))]),
@@ -136,14 +167,20 @@ class _PosScreenState extends State<PosScreen> {
         const Divider(),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('المجموع'), Text('$total JOD', style: const TextStyle(fontWeight: FontWeight.w800))]),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('طريقة الدفع'), Text(method == 'cash' ? 'نقدي' : method, style: const TextStyle(fontWeight: FontWeight.bold))]),
+        if (joUuid != null) ...[
+          const Divider(),
+          const Text('نظام الفوترة الوطني (الأردن)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue)),
+          Text('UUID: $joUuid', style: const TextStyle(fontSize: 9, color: Colors.grey)),
+          if (joQr != null) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: joQr.toString().startsWith('http') ? Image.network(joQr, width: 120, height: 120) : Image.memory(base64Decode(joQr.toString().split(',').last), width: 120, height: 120))),
+        ],
         const SizedBox(height: 8), const Center(child: Text('شكراً لزيارتكم', style: TextStyle(fontWeight: FontWeight.bold))),
       ])),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق')), ElevatedButton.icon(onPressed: () { Navigator.pop(ctx); _printThermal(names, items, receiptNo, total, method); }, icon: const Icon(Icons.print), label: const Text('طباعة حرارية'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق')), ElevatedButton.icon(onPressed: () { Navigator.pop(ctx); _printThermal(names, items, receiptNo, total, method, joUuid: joUuid, joQr: joQr); }, icon: const Icon(Icons.print), label: const Text('طباعة حرارية'))],
     ));
   }
 
   // Direct thermal (ESC/POS style) print via browser print window sized for 80mm receipt
-  Future<void> _printThermal(List<String> names, List items, String receiptNo, double total, String method) async {
+  Future<void> _printThermal(List<String> names, List items, String receiptNo, double total, String method, {String? joUuid, String? joQr}) async {
     final settings = await PrinterSettingsStore.load();
     final mm = settings.mm;
     final now = DateTime.now().toString().substring(0, 19);
@@ -187,6 +224,7 @@ class _PosScreenState extends State<PosScreen> {
   <div style="display:flex;justify-content:space-between;font-size:${fs + 2}px;font-weight:bold;"><span>المجموع</span><span>$total</span></div>
   <div style="display:flex;justify-content:space-between;font-size:${fs}px;"><span>طريقة الدفع</span><span>$methodLabel</span></div>
   <div style="display:flex;justify-content:space-between;font-size:${fs}px;"><span>المدفوع</span><span>$total</span></div>
+  ${joQr != null ? '<div style="text-align:center;margin-top:10px;"><img src="$joQr" width="120" height="120"/><br><span style="font-size:8px;">$joUuid</span></div>' : ''}
   <br>
   <div style="text-align:center;font-size:${fs}px;font-weight:bold;">شكراً لزيارتكم</div>
 </body>
@@ -250,110 +288,207 @@ class _PosScreenState extends State<PosScreen> {
     final img = rawImg != null && (rawImg as String).isNotEmpty ? AppConfig.resolveImageUrl(rawImg.toString()) : null;
     final inCart = _cart.any((e) => e['id'] == p['id']);
     final cs = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: inCart ? cs.primary : Colors.transparent, width: inCart ? 2 : 0)),
-      child: InkWell(
-        onTap: () => _addToCart(p),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [const Color(0xFF6D5BD0).withOpacity(0.10), const Color(0xFF00BFA6).withOpacity(0.08)], begin: Alignment.topLeft, end: Alignment.bottomRight)), child: Center(child: img != null ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(img, fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, size: 34, color: Colors.grey.shade400))) : Icon(Icons.inventory_2_rounded, size: 36, color: Colors.grey.shade400)))),
-          Container(padding: const EdgeInsets.fromLTRB(8, 8, 8, 8), color: Colors.white, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 3), Row(children: [Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(6)), child: Text('${price.toStringAsFixed(2)} JOD', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)))), const Spacer(), if (inCart) const Icon(Icons.check_circle, size: 16, color: Colors.green)]), Text(sku, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.grey))]))]))); }
-
-  @override
-  Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 700;
-    final mobileCols = MediaQuery.of(context).size.width < 400 ? 2 : (MediaQuery.of(context).size.width < 600 ? 3 : null);
-    final cols = mobileCols ?? (isWide ? 4 : 2);
-    final grid = Expanded(
-      flex: 2,
-      child: Column(children: [
-        Padding(padding: const EdgeInsets.all(8), child: TextField(controller: _barcodeCtrl, decoration: InputDecoration(hintText: 'بحث الاسم / SKU / امسح الباركود ثم Enter', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(icon: const Icon(Icons.qr_code_scanner), onPressed: () => _scanBarcode(_barcodeCtrl.text)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: const Color(0xFFF9F9FB)), onSubmitted: _scanBarcode)),
-        Expanded(child: _products.isEmpty ? const Center(child: Text('لا توجد منتجات — أضف من المنتجات')) : GridView.builder(padding: const EdgeInsets.all(8), gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols, childAspectRatio: isWide ? 0.82 : 0.72, crossAxisSpacing: 10, mainAxisSpacing: 10), itemCount: _products.length, itemBuilder: (_, i) => _productCard(_products[i] as Map, context))) ]));
-    final cart = Expanded(
+    
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: Offset(0, _ui.shadowDepth),
+            blurRadius: _ui.shadowDepth,
+          ),
+        ],
+      ),
       child: Card(
-        margin: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            const Padding(padding: EdgeInsets.all(12), child: Text('السلة', style: TextStyle(fontWeight: FontWeight.bold))),
-            Expanded(
-              child: ListView(
-                children: _cart.asMap().entries.map((en) {
-                  final e = en.value;
-                  return ListTile(
-                    title: Text(e['name']),
-                    subtitle: Text('${e['price']} x ${e['qty']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8), 
+          side: BorderSide(color: inCart ? cs.primary : Colors.grey.shade200, width: inCart ? 1.5 : 0.5)
+        ),
+        child: InkWell(
+          onTap: () => _addToCart(p),
+          borderRadius: BorderRadius.circular(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch, 
+            children: [
+              if (_ui.showImages)
+                Expanded(
+                  child: Container(
+                    color: Colors.grey.shade50,
+                    child: Center(
+                      child: img != null 
+                        ? Image.network(img, fit: BoxFit.cover, width: double.infinity, height: double.infinity, 
+                            errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, size: 16, color: Colors.grey.shade400))
+                        : Icon(Icons.inventory_2_rounded, size: 18, color: Colors.grey.shade400)
+                    )
+                  )
+                ),
+              Container(
+                padding: const EdgeInsets.all(4), 
+                color: Colors.white, 
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start, 
+                  children: [
+                    Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)), 
+                    const SizedBox(height: 1), 
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove),
-                          onPressed: () {
-                            setState(() {
-                              if (e['qty'] > 1) {
-                                e['qty']--;
-                              } else {
-                                _cart.removeAt(en.key);
-                              }
-                            });
-                          },
-                        ),
-                        IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => e['qty']++)),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => setState(() => _cart.removeAt(en.key)),
-                        ),
+                        Text('${price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8))),
+                        if (_ui.showSku) Text(sku, style: const TextStyle(fontSize: 7, color: Colors.grey)),
                       ],
                     ),
-                  );
-                }).toList(),
-              ),
+                  ]
+                )
+              )
+            ]
+          )
+        )
+      )
+    );
+  }
+
+  void _openUiSettings() {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(children: [Icon(Icons.tune), SizedBox(width: 8), Text('إعدادات واجهة البيع')]),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _settingRow('أعمدة الشبكة', Slider(value: _ui.gridColumns, min: 2, max: 12, divisions: 10, label: _ui.gridColumns.round().toString(), onChanged: (v) { setState(() => _ui.gridColumns = v); setDialogState(() {}); })),
+                _settingRow('عمق الـ 3D', Slider(value: _ui.shadowDepth, min: 0, max: 10, divisions: 10, label: _ui.shadowDepth.round().toString(), onChanged: (v) { setState(() => _ui.shadowDepth = v); setDialogState(() {}); })),
+                SwitchListTile(title: const Text('إظهار الصور', style: TextStyle(fontSize: 13)), value: _ui.showImages, onChanged: (v) { setState(() => _ui.showImages = v); setDialogState(() {}); }),
+                SwitchListTile(title: const Text('إظهار الـ SKU', style: TextStyle(fontSize: 13)), value: _ui.showSku, onChanged: (v) { setState(() => _ui.showSku = v); setDialogState(() {}); }),
+                SwitchListTile(title: const Text('السلة جهة اليمين', style: TextStyle(fontSize: 13)), value: _ui.cartOnRight, onChanged: (v) { setState(() => _ui.cartOnRight = v); setDialogState(() {}); }),
+              ],
             ),
-            if (_msg != null)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  _msg!,
-                  style: TextStyle(color: _msg!.contains('تم') ? Colors.green : Colors.red, fontSize: 12),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('الاجمالي'), MoneyDisplay(amount: _total)]),
-                  const SizedBox(height: 8),
-                  Wrap(spacing: 6, runSpacing: 6, children: [
-                    _payBtn('💵 نقدي', Icons.payments, _paying ? null : () => _pay()),
-                    _payBtn('💳 بطاقة', Icons.credit_card, _paying ? null : () => _payCard('card')),
-                    _payBtn('🏦 تحويل', Icons.account_balance, _paying ? null : () => _payCard('transfer')),
-                    _payBtn('📱 محفظة', Icons.wallet, _paying ? null : () => _payCard('wallet')),
-                  ]),
-                ],
-              ),
-            ),
+          ),
+          actions: [
+            TextButton(onPressed: () { _ui.save(); Navigator.pop(ctx); }, child: const Text('حفظ الإعدادات')),
           ],
         ),
       ),
     );
+  }
+
+  Widget _settingRow(String label, Widget child) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)), child]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 700;
+    final cols = isWide ? _ui.gridColumns.round() : (MediaQuery.of(context).size.width < 400 ? 4 : 5);
+    final grid = Expanded(
+      flex: 2,
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.all(4), 
+          child: Row(
+            children: [
+              Expanded(child: TextField(controller: _barcodeCtrl, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.all(6), hintText: 'بحث الاسم / SKU / باركود', prefixIcon: const Icon(Icons.search, size: 16), suffixIcon: IconButton(icon: const Icon(Icons.qr_code_scanner, size: 16), onPressed: () => _scanBarcode(_barcodeCtrl.text)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), filled: true, fillColor: const Color(0xFFF9F9FB)), onSubmitted: _scanBarcode)),
+              IconButton(onPressed: _openUiSettings, icon: const Icon(Icons.tune, color: Color(0xFF6D5BD0), size: 20))
+            ],
+          )
+        ),
+        Expanded(child: _products.isEmpty ? const Center(child: Text('لا توجد منتجات')) : GridView.builder(padding: const EdgeInsets.all(4), gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols, childAspectRatio: _ui.showImages ? 0.85 : 1.6, crossAxisSpacing: 4, mainAxisSpacing: 4), itemCount: _products.length, itemBuilder: (_, i) => _productCard(_products[i] as Map, context))) ]));
+    
+    final cartWidget = Card(
+      margin: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          const Padding(padding: EdgeInsets.all(8), child: Text('السلة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(children: [
+              Expanded(child: TextField(controller: _customerNameCtrl, style: const TextStyle(fontSize: 11), decoration: const InputDecoration(hintText: 'اسم العميل', isDense: true, contentPadding: EdgeInsets.all(6)))),
+              const SizedBox(width: 4),
+              Expanded(child: TextField(controller: _customerTaxIdCtrl, style: const TextStyle(fontSize: 11), decoration: const InputDecoration(hintText: 'الرقم الضريبي', isDense: true, contentPadding: EdgeInsets.all(6)))),
+            ]),
+          ),
+          Expanded(
+            child: ListView(
+              children: _cart.asMap().entries.map((en) {
+                final e = en.value;
+                return ListTile(
+                  dense: true, visualDensity: VisualDensity.compact,
+                  title: Text(e['name'], style: const TextStyle(fontSize: 11)),
+                  subtitle: Text('${e['price']} x ${e['qty']}', style: const TextStyle(fontSize: 10)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(iconSize: 16, icon: const Icon(Icons.remove), onPressed: () { setState(() { if (e['qty'] > 1) { e['qty']--; } else { _cart.removeAt(en.key); } }); }),
+                      IconButton(iconSize: 16, icon: const Icon(Icons.add), onPressed: () => setState(() => e['qty']++)),
+                      IconButton(iconSize: 16, icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => setState(() => _cart.removeAt(en.key))),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          if (_msg != null) Padding(padding: const EdgeInsets.all(4), child: Text(_msg!, style: TextStyle(color: _msg!.contains('تم') ? Colors.green : Colors.red, fontSize: 10))),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('المجموع الفرعي', style: TextStyle(fontSize: 11)), MoneyDisplay(amount: _subtotal, style: const TextStyle(fontSize: 11))]),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('الضريبة', style: TextStyle(fontSize: 11)), MoneyDisplay(amount: _taxTotal, style: const TextStyle(fontSize: 11))]),
+                const Divider(height: 8),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('الاجمالي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)), MoneyDisplay(amount: _total, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))]),
+                const SizedBox(height: 6),
+                Wrap(spacing: 4, runSpacing: 4, alignment: WrapAlignment.center, children: [
+                  _payBtn('💵 نقدي', Icons.payments, _paying ? null : () => _pay()),
+                  _payBtn('💳 بطاقة', Icons.credit_card, _paying ? null : () => _payCard('card')),
+                  _payBtn('🏦 تحويل', Icons.account_balance, _paying ? null : () => _payCard('transfer')),
+                  _payBtn('📱 محفظة', Icons.wallet, _paying ? null : () => _payCard('wallet')),
+                ]),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final cart = Expanded(child: cartWidget);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFAE7DC9),
-      appBar: AppBar(title: const Text('نقطة البيع')),
-      body: isWide ? Row(children: [grid, cart]) : Column(children: [SizedBox(height: 280, child: grid), Expanded(child: cart)]),
+      backgroundColor: Color(int.parse('FF${_ui.backgroundColor}', radix: 16)),
+      body: isWide 
+        ? Row(children: _ui.cartOnRight ? [grid, cart] : [cart, grid]) 
+        : Column(children: [SizedBox(height: 280, child: grid), Expanded(child: cart)]),
     );
   }
 
   Widget _payBtn(String label, IconData icon, VoidCallback? onPressed) {
-    return SizedBox(
+    return Container(
       width: _cartLayoutCompact() ? 110 : 130,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF4A3DA0),
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
       child: ElevatedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 16),
-        label: Text(label, style: const TextStyle(fontSize: 12)),
+        label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF6D5BD0),
           foregroundColor: Colors.white,
+          elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),

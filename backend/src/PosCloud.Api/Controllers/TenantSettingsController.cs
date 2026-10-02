@@ -41,6 +41,11 @@ public class TenantSettingsController(AppDbContext db) : ControllerBase
             s.Language = dto.Language ?? s.Language;
             s.Currency = dto.Currency ?? s.Currency;
             s.ReceiptTemplateJson = dto.ReceiptTemplateJson ?? s.ReceiptTemplateJson;
+            s.JoInvoiceEnabled = dto.JoInvoiceEnabled;
+            s.JoInvoiceClientId = dto.JoInvoiceClientId ?? s.JoInvoiceClientId;
+            s.JoInvoiceSecretKey = dto.JoInvoiceSecretKey ?? s.JoInvoiceSecretKey;
+            s.JoInvoiceActivityNumber = dto.JoInvoiceActivityNumber ?? s.JoInvoiceActivityNumber;
+            s.JoInvoiceEnvironment = dto.JoInvoiceEnvironment ?? s.JoInvoiceEnvironment;
             s.UpdatedAt = DateTime.UtcNow;
         }
         await db.SaveChangesAsync();

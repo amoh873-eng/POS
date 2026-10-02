@@ -27,21 +27,20 @@ if (isDevelopment && corsOrigins.Length == 0)
     corsOrigins = new[] { "http://localhost:5000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5000" };
 builder.Services.AddCors(o =>
 {
-    o.AddPolicy("app", p =>
-    {
-        if (corsOrigins.Length == 0)
-            p.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-        else
-            p.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-        // Note: when corsOrigins is empty, no origin is allowed — intentional in Production until configured.
-    });
-    // keep legacy "all" for backward compat but deprecated — logs warning in Production
-    o.AddPolicy("all", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    // Single policy (PHASE 32 — CORS cleanup): origins always come from config.
+    // When the list is empty, no origin is allowed — intentional in Production
+    // until configured. The legacy AllowAnyOrigin "all" policy was removed.
+    o.AddPolicy("app", p => p.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
 });
 
 // JWT — fail-fast in Production if missing or placeholder; Development allows dev key.
 var jwtKey = builder.Configuration["Jwt:Key"];
 var isProd = builder.Environment.IsProduction();
+
+// Host header hardening (PHASE 32): Production must name an explicit hostname/IP.
+var allowedHosts = builder.Configuration["AllowedHosts"] ?? "*";
+if (isProd && (string.IsNullOrWhiteSpace(allowedHosts) || allowedHosts == "*"))
+    throw new InvalidOperationException("AllowedHosts must be explicitly configured in Production (hostname or IP). Set 'AllowedHosts' in appsettings.Production.json or env ALLOWEDHOSTS.");
 if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Contains("CHANGE_ME") || jwtKey.Contains("__REQUIRED"))
 {
     if (isProd)
@@ -102,6 +101,8 @@ else
 }
 
 builder.Services.AddHealthChecks();
+builder.Services.AddHttpClient<PosCloud.Infrastructure.Integrations.JoInvoice.IJoInvoiceService, PosCloud.Infrastructure.Integrations.JoInvoice.JoInvoiceService>();
+builder.Services.AddScoped<PosCloud.Application.Accounting.IAccountingService, PosCloud.Infrastructure.Accounting.AccountingService>();
 
 var app = builder.Build();
 
@@ -117,19 +118,42 @@ var forwarded = new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
 {
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 };
-forwarded.KnownNetworks.Clear();
-forwarded.KnownProxies.Clear();
+// PHASE 32 — replace deprecated KnownNetworks/KnownProxies with the current API.
+// KnownIPNetworks supersedes both legacy lists (single IPs are /32 or /128
+// networks); clearing it keeps the LAN/behind-proxy behavior.
+forwarded.KnownIPNetworks.Clear();
 app.UseForwardedHeaders(forwarded);
 
 app.UseDefaultFiles();
+app.UseStaticFiles(); // serves wwwroot (index.html, main.dart.js, manifest.json, …)
+
+// Unified uploads strategy (PHASE 32): a single configurable physical root
+// (Uploads:Path, mounted as a Docker named volume in production) served at /uploads.
+// Docker/compose overrides Uploads__Path=/app/uploads (pos-uploads volume).
+var uploadsRoot = builder.Configuration["Uploads:Path"]
+    ?? Path.Combine(app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
+try { Directory.CreateDirectory(uploadsRoot); } catch { /* read-only root fallback is handled by StaticFiles */ }
 app.UseStaticFiles(new StaticFileOptions
 {
+    RequestPath = "/uploads",
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsRoot),
     OnPrepareResponse = ctx =>
     {
-        // CORS for images served via /uploads — allow any origin for product images (safe for LAN)
+        // CORS for image assets (PHASE 32): reflect the request Origin only when
+        // it is an explicitly allowed origin; Development may use a wildcard.
+        // Never send Access-Control-Allow-Origin: * in Production.
         if (ctx.Context.Request.Path.StartsWithSegments("/uploads"))
         {
-            ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            var origin = ctx.Context.Request.Headers.Origin.ToString();
+            if (corsOrigins.Contains(origin))
+            {
+                ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+                ctx.Context.Response.Headers["Vary"] = "Origin";
+            }
+            else if (isDevelopment)
+            {
+                ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            }
             ctx.Context.Response.Headers["Access-Control-Allow-Methods"] = "GET, OPTIONS";
         }
         // Cache product images for 7 days on client
@@ -152,6 +176,7 @@ app.UseMiddleware<PosCloud.Api.Middleware.AuditMiddleware>();
 
 app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 // Auto-migrate + seed on start — P1-4: demo seed guarded by IsDevelopment/SeedDemoData
 using (var scope = app.Services.CreateScope())

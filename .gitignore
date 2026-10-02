@@ -9,10 +9,11 @@ obj/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
-pubspec.lock
 build/
 *.g.dart
 *.freezed.dart
+# pubspec.lock IS committed for applications (reproducible builds incl. Docker)
+!pubspec.lock
 # DB
 *.db
 *.sqlite
@@ -36,3 +37,10 @@ pos.txt
 project-files.txt
 # Flutter SDK clone (do not commit)
 flutter/
+# PHASE-32 runtime artifacts (never commit)
+api_run.log
+api_err.log
+wwwroot/
+frontend/wwwroot/
+snapshot-phase32/
+PROJECT_REPORT.md

@@ -44,14 +44,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
       if (prods.isNotEmpty) selProd = prods[0]['id'].toString();
       if (branches.isNotEmpty) selBranch = branches[0]['id'].toString();
     } catch (_) {}
+    if (!mounted) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
         title: const Text('تعديل المخزون'),
         content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          DropdownButtonFormField<String>(value: selProd, decoration: const InputDecoration(labelText: 'المنتج'), items: prods.map<DropdownMenuItem<String>>((p) => DropdownMenuItem(value: p['id'].toString(), child: Text('${p['nameAr'] ?? p['nameEn'] ?? p['sku'] ?? 'P'}'))).toList(), onChanged: (v) => setD(() => selProd = v)),
+          DropdownButtonFormField<String>(initialValue: selProd, decoration: const InputDecoration(labelText: 'المنتج'), items: prods.map<DropdownMenuItem<String>>((p) => DropdownMenuItem(value: p['id'].toString(), child: Text('${p['nameAr'] ?? p['nameEn'] ?? p['sku'] ?? 'P'}'))).toList(), onChanged: (v) => setD(() => selProd = v)),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(value: selBranch, decoration: const InputDecoration(labelText: 'الفرع'), items: branches.map<DropdownMenuItem<String>>((b) => DropdownMenuItem(value: b['id'].toString(), child: Text('${b['name'] ?? b['code'] ?? 'B'}'))).toList(), onChanged: (v) => setD(() => selBranch = v)),
+          DropdownButtonFormField<String>(initialValue: selBranch, decoration: const InputDecoration(labelText: 'الفرع'), items: branches.map<DropdownMenuItem<String>>((b) => DropdownMenuItem(value: b['id'].toString(), child: Text('${b['name'] ?? b['code'] ?? 'B'}'))).toList(), onChanged: (v) => setD(() => selBranch = v)),
           const SizedBox(height: 8),
           TextField(controller: qty, decoration: const InputDecoration(labelText: 'الكمية (+/-) مثال: 10 أو -5'), keyboardType: TextInputType.number),
           if (localErr != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(localErr!, style: const TextStyle(color: Colors.red, fontSize: 12))),
@@ -96,7 +97,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ]),
               ),
             ),
-          Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: cs.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.warehouse, color: cs.primary)), const SizedBox(width: 12), const Expanded(child: Text('المخزون الحالي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Text('${_items.length} صنف', style: const TextStyle(color: Colors.grey))]))),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.warehouse, color: cs.primary)), const SizedBox(width: 12), const Expanded(child: Text('المخزون الحالي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Text('${_items.length} صنف', style: const TextStyle(color: Colors.grey))]))),
           const SizedBox(height: 8),
           ..._items.map((e) {
             final qty = (e['qtyOnHand'] ?? e['qty_on_hand'] ?? 0) as num;

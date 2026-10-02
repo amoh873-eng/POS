@@ -6,6 +6,7 @@ public class Purchase
     public Guid TenantId { get; set; }
     public Guid BranchId { get; set; }
     public Guid SupplierId { get; set; }
+    public Supplier? Supplier { get; set; }
     public string Status { get; set; } = "draft"; // draft/received/cancelled
     public decimal Subtotal { get; set; }
     public decimal TaxTotal { get; set; }

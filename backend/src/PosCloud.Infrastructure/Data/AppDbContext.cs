@@ -24,9 +24,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<Account>(e => {
+            e.ToTable("accounts");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+            e.HasMany(x => x.Children).WithOne().HasForeignKey(x => x.ParentId);
+        });
+        b.Entity<JournalEntry>(e => {
+            e.ToTable("journal_entries");
+            e.HasKey(x => x.Id);
+            e.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.JournalEntryId);
+        });
+        b.Entity<JournalEntryLine>(e => {
+            e.ToTable("journal_entry_lines");
+            e.HasKey(x => x.Id);
+        });
         b.Entity<Tenant>(e =>
         {
             e.ToTable("tenants");
@@ -59,7 +77,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<InventoryMovement>(e => { e.ToTable("inventory_movements"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.BranchId, x.ProductId, x.CreatedAt }); });
         b.Entity<StockCount>(e => { e.ToTable("stock_counts"); e.HasKey(x => x.Id); });
         b.Entity<StockCountLine>(e => { e.ToTable("stock_count_lines"); e.HasKey(x => x.Id); });
-        b.Entity<Sale>(e => { e.ToTable("sales"); e.HasKey(x => x.Id); e.HasIndex(x => x.ReceiptNo).IsUnique(); e.HasIndex(x => new { x.TenantId, x.BranchId, x.CreatedAt }); e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.SaleId); e.HasMany(x => x.Payments).WithOne().HasForeignKey(x => x.SaleId); });
+        b.Entity<Sale>(e => { e.ToTable("sales"); e.HasKey(x => x.Id); e.HasIndex(x => x.ReceiptNo).IsUnique(); e.HasIndex(x => x.JoInvoiceUuid).IsUnique(); e.HasIndex(x => new { x.TenantId, x.BranchId, x.CreatedAt }); e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.SaleId); e.HasMany(x => x.Payments).WithOne().HasForeignKey(x => x.SaleId); });
         b.Entity<SaleItem>(e => { e.ToTable("sale_items"); e.HasKey(x => x.Id); });
         b.Entity<Payment>(e => { e.ToTable("payments"); e.HasKey(x => x.Id); });
         b.Entity<Customer>(e => { e.ToTable("customers"); e.HasKey(x => x.Id); e.HasIndex(x => new { x.TenantId, x.Phone }); });

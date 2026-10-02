@@ -7,6 +7,7 @@ public class Sale
     public Guid BranchId { get; set; }
     public Guid? TerminalId { get; set; }
     public Guid? CustomerId { get; set; }
+    public Customer? Customer { get; set; }
     public string ReceiptNo { get; set; } = null!;
     public string Status { get; set; } = "completed";
     public decimal Subtotal { get; set; }
@@ -17,6 +18,10 @@ public class Sale
     public Guid? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? IdempotencyKey { get; set; }
+    public string? JoInvoiceUuid { get; set; }
+    public string? JoInvoiceQrCode { get; set; }
+    public string JoInvoiceStatus { get; set; } = "none"; // none, pending, submitted, failed
+    public string? JoInvoiceResponse { get; set; }
     public List<SaleItem> Items { get; set; } = new();
     public List<Payment> Payments { get; set; } = new();
 }
@@ -53,6 +58,9 @@ public class Customer
     public string Name { get; set; } = null!;
     public string? Phone { get; set; }
     public string? Email { get; set; }
+    public string? TaxId { get; set; }
+    public string? NationalId { get; set; }
+    public string? Address { get; set; }
     public decimal CreditLimit { get; set; }
     public decimal Balance { get; set; }
     public bool IsActive { get; set; } = true;
