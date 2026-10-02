@@ -22,7 +22,7 @@ services:
     environment:
       POSTGRES_DB: ${POS_POSTGRES_DB:-POSCloudDb}
       POSTGRES_USER: ${POS_POSTGRES_USER:-poscloud}
-      POSTGRES_PASSWORD: ${POS_POSTGRES_PASSWORD:?Required: set POS_POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: "${POS_POSTGRES_PASSWORD:?Required: set POS_POSTGRES_PASSWORD in .env}"
     volumes:
       - pos-pgdata:/var/lib/postgresql/data
     networks: [pos-net]
@@ -48,12 +48,12 @@ services:
       ConnectionStrings__Default: "Host=pos-db;Database=${POS_POSTGRES_DB:-POSCloudDb};Username=${POS_POSTGRES_USER:-poscloud};Password=${POS_POSTGRES_PASSWORD:?Required}"
       Jwt__Issuer: PosCloud
       Jwt__Audience: PosCloud
-      Jwt__Key: ${POS_JWT_KEY:?Required: set POS_JWT_KEY (>=32 chars) in .env}
-      AllowedHosts: ${POS_ALLOWED_HOSTS:?Required: set POS_ALLOWED_HOSTS (VPS hostname/IP) in .env}
+      Jwt__Key: "${POS_JWT_KEY:?Required: set POS_JWT_KEY (>=32 chars) in .env}"
+      AllowedHosts: "${POS_ALLOWED_HOSTS:?Required: set POS_ALLOWED_HOSTS (VPS hostname/IP) in .env}"
       UseInMemory: "false"
       SeedDemoData: "false"
       Uploads__Path: /app/uploads
-      Cors__AllowedOrigins__0: ${POS_WEB_ORIGIN:?Required: set POS_WEB_ORIGIN (http://host:web-port) in .env}
+      Cors__AllowedOrigins__0: "${POS_WEB_ORIGIN:?Required: set POS_WEB_ORIGIN (http://host:web-port) in .env}"
     volumes:
       - pos-uploads:/app/uploads
     networks: [pos-net]
