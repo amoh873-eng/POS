@@ -23,7 +23,7 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 
 EXPOSE 80
 
-HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
-    CMD wget -q -O /dev/null http://localhost/ || exit 1
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=5 \
+    CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
